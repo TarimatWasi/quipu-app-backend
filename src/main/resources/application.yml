@@ -1,0 +1,30 @@
+# Configuración común a todos los perfiles, sin valores sensibles ni por defecto (BE-SPR-CFG-05).
+# Lo que difiere entre entornos vive en application-local.yml y application-prod.yml.
+spring:
+  application:
+    name: quipu
+  # Sin SPRING_PROFILES_ACTIVE (desarrollo y pruebas) corre "local"; el despliegue fija "prod".
+  profiles:
+    default: local
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

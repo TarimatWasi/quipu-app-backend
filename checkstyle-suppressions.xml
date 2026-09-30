@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- BE-SPR-EST-03: Javadoc obligatorio solo en los tipos y métodos públicos de port/in -->
+  <suppress checks="MissingJavadoc(Type|Method)" files="^(?!.*[\/]port[\/]in[\/]).*$"/>
+  <!-- BE-SPR-TST-09: los metodos de prueba usan method_scenario_result -->
+  <suppress checks="MethodName" files=".*[\\/]src[\\/]test[\\/].*"/>
+  <!-- BE-SPR-EST-02: las reglas de ArchUnit son constantes con el ID de la regla (BE_SPR_ARQ_01) -->
+  <suppress checks="(ConstantName|MemberName)" files=".*[\\/]architecture[\\/].*"/>
+</suppressions>

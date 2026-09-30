@@ -1,0 +1,11 @@
+# Perfil local: valores tolerantes para desarrollo. Nunca se usa en producción.
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/quipu}
+
+app:
+  cors:
+    allowed-origin: http://localhost:4200

@@ -1,0 +1,13 @@
+# Perfil prod (SPRING_PROFILES_ACTIVE=prod): estricto. Sin defaults: si falta una variable,
+# el arranque falla en vez de correr con valores de desarrollo (BE-SPR-CFG-05).
+server:
+  port: ${PORT}
+  forward-headers-strategy: native # el proxy termina TLS; respeta X-Forwarded-*
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+
+app:
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN} # origin exacto del frontend, https, sin "/" final
