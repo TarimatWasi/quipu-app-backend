@@ -1,0 +1,13 @@
+target/
+*.iml
+.idea/
+.vscode/
+HELP.md
+
+# Secrets y entorno local
+.env
+.env.*
+!.env.example
+
+# graphify (derivado)
+graphify-out/

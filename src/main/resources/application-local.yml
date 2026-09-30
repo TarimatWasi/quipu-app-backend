@@ -1,0 +1,22 @@
+# Perfil local (por defecto): máquina del desarrollador. Es el único perfil con valores por
+# defecto; dev y prod no los tienen.
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/quipu}
+
+app:
+  cors:
+    allowed-origin: http://localhost:4200
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.tarimatwasi: DEBUG

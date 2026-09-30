@@ -1,0 +1,27 @@
+# Perfil prod (SPRING_PROFILES_ACTIVE=prod, despliegue desde main): estricto. Sin defaults: si
+# falta una variable, el arranque falla en vez de correr con valores de desarrollo
+# (BE-SPR-CFG-05). La documentación de la API está apagada.
+server:
+  port: ${PORT}
+  forward-headers-strategy: native # el proxy termina TLS; respeta X-Forwarded-*
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+
+app:
+  admin:
+    required: true # sin ADMIN y sin variables ADMIN_* el arranque falla (AdminProperties, TAR-62)
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN} # origin exacto del frontend, https, sin "/" final
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: INFO
+    com.tarimatwasi: INFO

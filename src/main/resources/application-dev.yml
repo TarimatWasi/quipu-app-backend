@@ -1,0 +1,27 @@
+# Perfil dev (SPRING_PROFILES_ACTIVE=dev, despliegue desde la rama development): estricto como
+# prod. Sin defaults: si falta una variable, el arranque falla (BE-SPR-CFG-05). Diferencias con
+# prod: documentación de la API encendida y log de la aplicación en DEBUG.
+server:
+  port: ${PORT}
+  forward-headers-strategy: native # el proxy termina TLS; respeta X-Forwarded-*
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+
+app:
+  admin:
+    required: true # sin ADMIN y sin variables ADMIN_* el arranque falla (AdminProperties, TAR-62)
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN} # origin exacto del frontend, https, sin "/" final
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.tarimatwasi: DEBUG
