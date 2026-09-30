@@ -1,4 +1,5 @@
-# Perfil local: valores tolerantes para desarrollo. Nunca se usa en producción.
+# Perfil local (por defecto): máquina del desarrollador. Es el único perfil con valores por
+# defecto; dev y prod no los tienen.
 server:
   port: ${PORT:8080}
 
@@ -9,3 +10,13 @@ spring:
 app:
   cors:
     allowed-origin: http://localhost:4200
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.tarimatwasi: DEBUG

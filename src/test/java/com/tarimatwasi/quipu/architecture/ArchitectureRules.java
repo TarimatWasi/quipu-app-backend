@@ -48,7 +48,8 @@ final class ArchitectureRules {
   static final ArchRule BE_SPR_ARQ_01 =
       classes()
           .that()
-          .areAnnotatedWith(SpringBootConfiguration.class)
+          .areMetaAnnotatedWith(
+              SpringBootConfiguration.class) // @SpringBootApplication is a meta-annotation
           .should()
           .resideInAPackage(ROOT);
 
@@ -69,7 +70,9 @@ final class ArchitectureRules {
               "..port.out..",
               "..adapter.in..",
               "..adapter.out..",
-              "..config..");
+              "..config..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest static final ArchRule BE_SPR_ARQ_03 = ArchitectureConditions.layersFollowTheTable(ROOT);
 
@@ -80,7 +83,9 @@ final class ArchitectureRules {
           .resideInAPackage("..domain..")
           .should()
           .onlyDependOnClassesThat()
-          .resideInAnyPackage("java..", "org.jspecify..", "..domain..");
+          .resideInAnyPackage("java..", "org.jspecify..", "..domain..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_CONTROLLERS =
@@ -88,7 +93,9 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(RestController.class)
           .should()
-          .haveSimpleNameEndingWith("Controller");
+          .haveSimpleNameEndingWith("Controller")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_USE_CASES =
@@ -100,7 +107,9 @@ final class ArchitectureRules {
           .and()
           .doNotHaveSimpleName("package-info")
           .should()
-          .haveSimpleNameEndingWith("UseCase");
+          .haveSimpleNameEndingWith("UseCase")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_OUT_PORTS =
@@ -112,7 +121,9 @@ final class ArchitectureRules {
           .and()
           .doNotHaveSimpleName("package-info")
           .should()
-          .haveSimpleNameEndingWith("Port");
+          .haveSimpleNameEndingWith("Port")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_ENTITIES =
@@ -120,7 +131,9 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(jakarta.persistence.Entity.class)
           .should()
-          .haveSimpleNameEndingWith("JpaEntity");
+          .haveSimpleNameEndingWith("JpaEntity")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_REPOSITORIES =
@@ -128,7 +141,9 @@ final class ArchitectureRules {
           .that()
           .areAssignableTo(Repository.class)
           .should()
-          .haveSimpleNameEndingWith("JpaRepository");
+          .haveSimpleNameEndingWith("JpaRepository")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_PROPERTIES =
@@ -136,7 +151,9 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(ConfigurationProperties.class)
           .should()
-          .haveSimpleNameEndingWith("Properties");
+          .haveSimpleNameEndingWith("Properties")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_EXCEPTIONS =
@@ -144,7 +161,9 @@ final class ArchitectureRules {
           .that()
           .areAssignableTo(Throwable.class)
           .should()
-          .haveSimpleNameEndingWith("Exception");
+          .haveSimpleNameEndingWith("Exception")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   // --- Inyección (DI) ---
 
@@ -167,7 +186,9 @@ final class ArchitectureRules {
           .should()
           .beFinal()
           .andShould()
-          .notBeAnnotatedWith(Autowired.class);
+          .notBeAnnotatedWith(Autowired.class)
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_DI_06 =
@@ -192,7 +213,9 @@ final class ArchitectureRules {
           .andShould()
           .beAnnotatedWith(Validated.class)
           .andShould()
-          .notBeAnnotatedWith(Component.class);
+          .notBeAnnotatedWith(Component.class)
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest static final ArchRule BE_SPR_CFG_03 = ArchitectureConditions.atMostOneValuePerClass();
 
@@ -239,7 +262,9 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(RestController.class)
           .should()
-          .resideInAPackage("..adapter.in.rest..");
+          .resideInAPackage("..adapter.in.rest..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_WEB_02 =
@@ -251,7 +276,9 @@ final class ArchitectureRules {
           .areAnnotatedWith(jakarta.persistence.Entity.class)
           .orShould()
           .dependOnClassesThat()
-          .resideInAPackage("..domain..");
+          .resideInAPackage("..domain..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest static final ArchRule BE_SPR_WEB_03 = ArchitectureConditions.requestBodyIsValidated();
 
@@ -264,7 +291,9 @@ final class ArchitectureRules {
           .implement(
               com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage("..port.in.."))
           .should()
-          .resideInAPackage("..application..");
+          .resideInAPackage("..application..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_APP_02 =
@@ -273,7 +302,9 @@ final class ArchitectureRules {
           .areAnnotatedWith(Transactional.class)
           .should()
           .beDeclaredInClassesThat()
-          .resideInAPackage("..application..");
+          .resideInAPackage("..application..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   // --- Persistencia (DAT) ---
 
@@ -287,7 +318,9 @@ final class ArchitectureRules {
           .or()
           .areAnnotatedWith(jakarta.persistence.Embeddable.class)
           .should()
-          .resideInAPackage("..adapter.out.persistence..");
+          .resideInAPackage("..adapter.out.persistence..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_DAT_02 =
@@ -297,7 +330,9 @@ final class ArchitectureRules {
           .should()
           .bePackagePrivate()
           .andShould()
-          .resideInAPackage("..adapter.out.persistence..");
+          .resideInAPackage("..adapter.out.persistence..")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 
   @ArchTest static final ArchRule BE_SPR_DAT_07 = ArchitectureConditions.toOneRelationsAreLazy();
 
@@ -348,5 +383,7 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(jakarta.persistence.Entity.class)
           .should()
-          .beAssignableTo(ROOT + ".shared.adapter.out.persistence.AuditableEntity");
+          .beAssignableTo(ROOT + ".shared.adapter.out.persistence.AuditableEntity")
+          // empty until TAR-62: there is no module code for this scope yet
+          .allowEmptyShould(true);
 }

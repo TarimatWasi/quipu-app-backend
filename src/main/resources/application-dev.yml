@@ -1,6 +1,6 @@
-# Perfil prod (SPRING_PROFILES_ACTIVE=prod, despliegue desde main): estricto. Sin defaults: si
-# falta una variable, el arranque falla en vez de correr con valores de desarrollo
-# (BE-SPR-CFG-05). La documentación de la API está apagada.
+# Perfil dev (SPRING_PROFILES_ACTIVE=dev, despliegue desde la rama development): estricto como
+# prod. Sin defaults: si falta una variable, el arranque falla (BE-SPR-CFG-05). Diferencias con
+# prod: documentación de la API encendida y log de la aplicación en DEBUG.
 server:
   port: ${PORT}
   forward-headers-strategy: native # el proxy termina TLS; respeta X-Forwarded-*
@@ -17,11 +17,11 @@ app:
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
   swagger-ui:
-    enabled: false
+    enabled: true
 
 logging:
   level:
     root: INFO
-    com.tarimatwasi: INFO
+    com.tarimatwasi: DEBUG

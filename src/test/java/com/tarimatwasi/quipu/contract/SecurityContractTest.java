@@ -1,9 +1,11 @@
 package com.tarimatwasi.quipu.contract;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tarimatwasi.quipu.support.PostgresContainers;
@@ -36,16 +38,36 @@ class SecurityContractTest {
   }
 
   @Test
-  void state_changing_request_that_is_not_json_is_rejected_with_415() throws Exception {
+  void state_changing_request_with_a_non_json_body_is_rejected_with_415() throws Exception {
     mvc.perform(post("/api/v1/anything").contentType(MediaType.TEXT_PLAIN).content("x"))
-        .andExpect(status().isUnsupportedMediaType());
-    mvc.perform(post("/api/v1/anything")).andExpect(status().isUnsupportedMediaType());
+        .andExpect(status().isUnsupportedMediaType())
+        .andExpect(jsonPath("$.code").value("unsupported_media_type"));
   }
 
   @Test
-  void json_state_changing_request_reaches_authorization() throws Exception {
-    mvc.perform(post("/api/v1/anything").contentType(MediaType.APPLICATION_JSON).content("{}"))
+  void state_changing_request_with_a_form_content_type_is_rejected_even_if_empty()
+      throws Exception {
+    mvc.perform(post("/api/v1/anything").contentType(MediaType.APPLICATION_FORM_URLENCODED))
+        .andExpect(status().isUnsupportedMediaType());
+  }
+
+  @Test
+  void json_with_charset_reaches_authorization() throws Exception {
+    mvc.perform(
+            post("/api/v1/anything").contentType("application/json;charset=UTF-8").content("{}"))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void bodyless_action_requests_reach_authorization() throws Exception {
+    mvc.perform(post("/api/v1/anything")).andExpect(status().isUnauthorized());
+    mvc.perform(delete("/api/v1/anything")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void bodyless_cross_site_request_is_stopped_by_cors() throws Exception {
+    mvc.perform(post("/api/v1/anything").header("Origin", "https://evil.example"))
+        .andExpect(status().isForbidden());
   }
 
   @Test

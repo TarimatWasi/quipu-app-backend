@@ -45,6 +45,7 @@ class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource(
       @Value("${app.cors.allowed-origin}") String allowedOrigin) {
+    validateOrigin(allowedOrigin);
     var config = new CorsConfiguration();
     config.setAllowedOrigins(List.of(allowedOrigin));
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
@@ -53,6 +54,15 @@ class SecurityConfig {
     var source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);
     return source;
+  }
+
+  /** BE-SPR-SEC-05: one exact origin (scheme and host, no wildcard and no trailing slash). */
+  static void validateOrigin(String origin) {
+    if (!origin.matches("https?://[^/*\\s]+")) {
+      throw new IllegalStateException(
+          "app.cors.allowed-origin must be one exact origin such as https://app.example.com"
+              + " (no wildcard, path or trailing slash)");
+    }
   }
 
   /** No users yet: avoids Boot's generated default user (and its logged password). */

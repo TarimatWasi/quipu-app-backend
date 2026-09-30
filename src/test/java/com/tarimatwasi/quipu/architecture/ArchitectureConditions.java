@@ -79,8 +79,7 @@ final class ArchitectureConditions {
                   if (count > 1) {
                     events.add(violated(c, c.getName() + " declares " + count + " @Value"));
                   }
-                }))
-        .allowEmptyShould(true);
+                }));
   }
 
   /** BE-SPR-CFG-04: no {@code @Value} on fields and no SpEL inside {@code @Value}. */
@@ -96,8 +95,7 @@ final class ArchitectureConditions {
                   valueAnnotations(c)
                       .filter(a -> String.valueOf(a.get("value").orElse("")).contains("#{"))
                       .forEach(a -> events.add(violated(c, c.getName() + " uses SpEL in @Value")));
-                }))
-        .allowEmptyShould(true);
+                }));
   }
 
   /** BE-SPR-WEB-03: every {@code @RequestBody} parameter is also {@code @Valid}. */
@@ -119,8 +117,7 @@ final class ArchitectureConditions {
                                             events.add(
                                                 violated(m, m.getFullName() + " lacks @Valid"));
                                           }
-                                        }))))
-        .allowEmptyShould(true);
+                                        }))));
   }
 
   /** BE-SPR-DAT-07: {@code @ManyToOne} and {@code @OneToOne} declare {@code fetch = LAZY}. */
@@ -139,8 +136,7 @@ final class ArchitectureConditions {
                                     .forEach(
                                         a ->
                                             events.add(
-                                                violated(f, f.getFullName() + " is not LAZY"))))))
-        .allowEmptyShould(true);
+                                                violated(f, f.getFullName() + " is not LAZY"))))));
   }
 
   /** QP-SPRMONO-API-02: route prefixes per surface ({@code /bff/} or {@code /api/v<n>/}). */
@@ -161,7 +157,7 @@ final class ArchitectureConditions {
                           route ->
                               events.add(violated(c, c.getName() + " maps the route " + route)));
                 }))
-        .allowEmptyShould(true);
+        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
   }
 
   /** QP-SPRMONO-API-03 (structural part): a {@code /api/v2+} route coexists with its v1. */
@@ -198,7 +194,7 @@ final class ArchitectureConditions {
                                     c, c.getName() + " has /v" + m.group(1) + " without /v1")));
               }
             })
-        .allowEmptyShould(true);
+        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
   }
 
   /** BE-SPR-ARQ-03: same-module dependencies between layers follow the guide table. */
@@ -221,7 +217,7 @@ final class ArchitectureConditions {
                     }
                   }
                 }))
-        .allowEmptyShould(true);
+        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
   }
 
   /** BE-SPR-CFG-01: {@code @ConfigurationProperties} prefixes start with {@code app.}. */
@@ -244,7 +240,7 @@ final class ArchitectureConditions {
                     events.add(violated(c, c.getName() + " uses the prefix " + prefix));
                   }
                 }))
-        .allowEmptyShould(true);
+        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
   }
 
   /** BE-SPR-TST-05: {@code FooTest} lives in the package of {@code Foo}. */
@@ -266,8 +262,7 @@ final class ArchitectureConditions {
                   if (!exempt && !found) {
                     events.add(violated(c, c.getName() + " has no " + tested + " next to it"));
                   }
-                }))
-        .allowEmptyShould(true);
+                }));
   }
 
   private static ArchCondition<JavaClass> condition(String description, Check check) {

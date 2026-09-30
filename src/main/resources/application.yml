@@ -1,9 +1,11 @@
 # Configuración común a todos los perfiles, sin valores sensibles ni por defecto (BE-SPR-CFG-05).
-# Lo que difiere entre entornos vive en application-local.yml y application-prod.yml.
+# Perfiles: local (por defecto, máquina del desarrollador), dev (despliegue desde la rama
+# development) y prod (despliegue desde main). Lo que difiere vive en application-<perfil>.yml.
 spring:
   application:
     name: quipu
-  # Sin SPRING_PROFILES_ACTIVE (desarrollo y pruebas) corre "local"; el despliegue fija "prod".
+  # Sin SPRING_PROFILES_ACTIVE (desarrollo y pruebas) corre "local"; dev y prod se activan
+  # explícitamente en el despliegue.
   profiles:
     default: local
   jpa:
@@ -28,3 +30,12 @@ management:
     web:
       exposure:
         include: health
+
+# Documentación de la API (QP-SPRMONO-CTR-01): apagada salvo en local y dev.
+springdoc:
+  api-docs:
+    enabled: false
+    path: /api-docs
+  swagger-ui:
+    enabled: false
+    path: /swagger-ui.html
