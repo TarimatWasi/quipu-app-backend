@@ -9,6 +9,9 @@ import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_
 import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_USE_FIELD_INJECTION;
 import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_USE_JAVA_UTIL_LOGGING;
 
+import com.tngtech.archunit.core.domain.JavaCall;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.properties.HasOwner;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import java.time.Instant;
@@ -355,9 +358,13 @@ final class ArchitectureRules {
           .dependOnClassesThat()
           .areAssignableTo(Executors.class)
           .orShould()
-          .callConstructor(Thread.class)
+          .dependOnClassesThat()
+          .areAssignableTo(ThreadGroup.class)
           .orShould()
-          .callConstructor(Thread.class, Runnable.class);
+          .callConstructorWhere(
+              JavaCall.Predicates.target(
+                  HasOwner.Predicates.With.owner(JavaClass.Predicates.assignableTo(Thread.class))))
+          .because("any Thread constructor, whatever its overload, creates an unmanaged thread");
 
   @ArchTest
   static final ArchRule BE_SPR_CON_03 =

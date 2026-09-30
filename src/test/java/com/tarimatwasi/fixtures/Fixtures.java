@@ -49,6 +49,38 @@ public final class Fixtures {
     Object owner;
   }
 
+  @Entity
+  public static class EagerGetter {
+    @ManyToOne
+    public Object getOwner() {
+      return null;
+    }
+  }
+
+  @Entity
+  public static class LazyGetter {
+    @ManyToOne(fetch = FetchType.LAZY)
+    public Object getOwner() {
+      return null;
+    }
+  }
+
+  public static class ThreadWithName {
+    public final Thread thread = new Thread("w");
+  }
+
+  public static class ThreadWithTaskAndName {
+    public final Thread thread = new Thread(() -> {}, "w");
+  }
+
+  public static class ThreadSubclassInstance {
+    public final Thread thread = new Thread() {};
+  }
+
+  public static class ManagedThreadFree {
+    public final Object value = new Object();
+  }
+
   @ConfigurationProperties(prefix = "other.thing")
   public record WrongPrefix(String a) {}
 

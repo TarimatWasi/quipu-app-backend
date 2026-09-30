@@ -8,6 +8,7 @@ import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaEnumConstant;
+import com.tngtech.archunit.core.domain.JavaMember;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
@@ -125,18 +126,20 @@ final class ArchitectureConditions {
     return classes()
         .should(
             condition(
-                "declare LAZY on @ManyToOne and @OneToOne",
+                "declare LAZY on @ManyToOne and @OneToOne (fields and getters)",
                 (c, events) ->
-                    c.getFields()
+                    Stream.<JavaMember>concat(c.getFields().stream(), c.getMethods().stream())
                         .forEach(
-                            f ->
-                                f.getAnnotations().stream()
+                            member ->
+                                member.getAnnotations().stream()
                                     .filter(a -> TO_ONE.contains(a.getRawType().getName()))
                                     .filter(a -> !isLazy(a))
                                     .forEach(
                                         a ->
                                             events.add(
-                                                violated(f, f.getFullName() + " is not LAZY"))))));
+                                                violated(
+                                                    member,
+                                                    member.getFullName() + " is not LAZY"))))));
   }
 
   /** QP-SPRMONO-API-02: route prefixes per surface ({@code /bff/} or {@code /api/v<n>/}). */
@@ -318,12 +321,20 @@ final class ArchitectureConditions {
       if (mapped) {
         for (var base : bases) {
           for (var path : paths(method.getAnnotations())) {
-            routes.add(base + path);
+            routes.add(join(base, path));
           }
         }
       }
     }
     return routes;
+  }
+
+  /** Joins a class and a method mapping like Spring: adds the missing slash, collapses repeats. */
+  static String join(String base, String path) {
+    var joined = ("/" + base + "/" + path).replaceAll("/{2,}", "/");
+    return joined.length() > 1 && joined.endsWith("/")
+        ? joined.substring(0, joined.length() - 1)
+        : joined;
   }
 
   /** The {@code value} and {@code path} of the mapping annotations; one empty path if none. */

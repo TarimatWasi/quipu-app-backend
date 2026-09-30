@@ -1,5 +1,6 @@
 package com.tarimatwasi.quipu.architecture;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -63,6 +64,22 @@ class ArchitectureConditionsTest {
   }
 
   @Test
+  void dat07_inspectsGettersOfPropertyAccessEntities() {
+    var rule = ArchitectureConditions.toOneRelationsAreLazy();
+    assertFails(rule, Fixtures.EagerGetter.class);
+    assertPasses(rule, Fixtures.LazyGetter.class);
+  }
+
+  @Test
+  void con01_rejectsEveryThreadConstructor() {
+    var rule = ArchitectureRules.BE_SPR_CON_01;
+    assertFails(rule, Fixtures.ThreadWithName.class);
+    assertFails(rule, Fixtures.ThreadWithTaskAndName.class);
+    assertFails(rule, Fixtures.ThreadSubclassInstance.class);
+    assertPasses(rule, Fixtures.ManagedThreadFree.class);
+  }
+
+  @Test
   void cfg01_requires_the_app_prefix() {
     var rule = ArchitectureConditions.propertiesPrefixIsApp();
     assertFails(rule, Fixtures.WrongPrefix.class);
@@ -75,6 +92,23 @@ class ArchitectureConditionsTest {
     assertFails(rule, CoreRoutes.WrongPrefixController.class);
     assertFails(rule, BffRoutes.BadBffController.class);
     assertPasses(rule, CoreRoutes.V1Controller.class, BffRoutes.GoodBffController.class);
+  }
+
+  @Test
+  void api02_normalizesClassAndMethodSegmentsLikeSpring() {
+    var rule = ArchitectureConditions.routesUseTheSurfacePrefix();
+    assertPasses(
+        rule, CoreRoutes.PathVariableController.class, CoreRoutes.NoLeadingSlashController.class);
+    assertFails(rule, CoreRoutes.NoLeadingSlashWrongController.class);
+  }
+
+  @Test
+  void join_addsTheMissingSlashAndCollapsesRepeats() {
+    assertThat(ArchitectureConditions.join("/api/v1/things", "{id}"))
+        .isEqualTo("/api/v1/things/{id}");
+    assertThat(ArchitectureConditions.join("api/v1/things/", "/x")).isEqualTo("/api/v1/things/x");
+    assertThat(ArchitectureConditions.join("/api/v1/things", "")).isEqualTo("/api/v1/things");
+    assertThat(ArchitectureConditions.join("", "")).isEqualTo("/");
   }
 
   @Test

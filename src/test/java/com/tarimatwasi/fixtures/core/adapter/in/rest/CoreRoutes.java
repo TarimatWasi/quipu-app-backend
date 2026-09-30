@@ -27,6 +27,33 @@ public final class CoreRoutes {
   }
 
   @RestController
+  @RequestMapping("/api/v1/things")
+  public static class PathVariableController {
+    @GetMapping("{id}")
+    public String one() {
+      return "";
+    }
+  }
+
+  @RestController
+  @RequestMapping("api/v1/bare")
+  public static class NoLeadingSlashController {
+    @GetMapping("list")
+    public String list() {
+      return "";
+    }
+  }
+
+  @RestController
+  @RequestMapping("api/wrong")
+  public static class NoLeadingSlashWrongController {
+    @GetMapping("list")
+    public String list() {
+      return "";
+    }
+  }
+
+  @RestController
   @RequestMapping("/api/v2/orphans")
   public static class OrphanV2Controller {
     @GetMapping
