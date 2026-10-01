@@ -1,12 +1,17 @@
 package com.tarimatwasi.quipu.bff.adapter.in.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.tarimatwasi.quipu.support.PostgresContainers;
+import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
@@ -57,5 +62,36 @@ class SessionCookiePropertiesTest {
             .getHeader("Set-Cookie");
 
     assertThat(setCookie).contains("; SameSite=None").contains("; Secure").contains("; HttpOnly");
+  }
+
+  /** A zero or negative Max-Age would expire the cookie at once (or delete it): fail at startup. */
+  @ParameterizedTest
+  @ValueSource(longs = {-1, 0, 59})
+  void aMaxAgeShorterThanAMinuteIsRejected(long seconds) {
+    assertThatThrownBy(
+            () ->
+                new SessionCookieProperties(
+                    SessionCookieProperties.SameSite.LAX, Duration.ofSeconds(seconds)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("app.session.max-age");
+  }
+
+  @Test
+  void aMaxAgeOfOneMinuteOrMoreIsAccepted() {
+    assertThatCode(
+            () ->
+                new SessionCookieProperties(
+                    SessionCookieProperties.SameSite.LAX, Duration.ofMinutes(1)))
+        .doesNotThrowAnyException();
+  }
+
+  // The Binder can hand a record a null for a property that is absent: the check must reject it.
+  @SuppressWarnings("NullAway")
+  @Test
+  void aMissingMaxAgeIsRejectedInsteadOfFallingBackToADivergentDefault() {
+    assertThatThrownBy(
+            () -> new SessionCookieProperties(SessionCookieProperties.SameSite.LAX, null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("app.session.max-age");
   }
 }

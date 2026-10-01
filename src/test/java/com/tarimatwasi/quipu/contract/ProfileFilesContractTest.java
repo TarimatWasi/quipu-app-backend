@@ -2,8 +2,10 @@ package com.tarimatwasi.quipu.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tarimatwasi.quipu.bff.adapter.in.rest.SessionCookieProperties;
 import com.tarimatwasi.quipu.shared.config.CorsProperties;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -138,6 +140,20 @@ class ProfileFilesContractTest {
     all.putAll(load(file));
 
     assertThat(all.get("app.session.same-site")).isEqualTo("lax");
+  }
+
+  /** TAR-75: the cookie and the token expire together, from the same property of the real YAML. */
+  @Test
+  void sessionCookieMaxAge_equalsTheJwtLifetimeOfTheRealConfiguration() throws IOException {
+    var env = new MockEnvironment();
+    new YamlPropertySourceLoader()
+        .load("base", new ClassPathResource("application.yml"))
+        .forEach(env.getPropertySources()::addLast);
+
+    var cookie = Binder.get(env).bind("app.session", SessionCookieProperties.class).get();
+    var jwtMinutes = Long.parseLong(String.valueOf(env.getProperty("app.jwt.expiration-minutes")));
+
+    assertThat(cookie.maxAge()).isEqualTo(Duration.ofMinutes(jwtMinutes));
   }
 
   /**

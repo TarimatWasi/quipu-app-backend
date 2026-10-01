@@ -14,11 +14,14 @@ app:
     allowed-origin: ${CORS_ALLOWED_ORIGIN} # origin exacto del frontend, https, sin "/" final
     # La reescritura de Vercel (/bff) conserva el Origin del host de Vercel (TAR-75): se listan el
     # segundo alias de producción y, con comodín solo dentro de la primera etiqueta, los alias de
-    # rama y los despliegues por hash del proyecto. Cualquier otro origen recibe 403.
+    # rama y los despliegues por hash del proyecto. Cualquier otro origen recibe 403. Un patrón
+    # ligado al equipo no distingue un host del equipo de una etiqueta parecida que termine igual:
+    # Vercel asigna las etiquetas y la cookie de sesión vive en el dominio de Vercel.
     allowed-origins:
       - https://quipu-app-angweb-dev-shizukajikus-projects.vercel.app
+    # El comodín casa [a-z0-9-]+ (nunca un punto) y cubre los alias de rama
+    # (quipu-app-angweb-dev-git-<rama>-...) y los despliegues por hash; un solo patrón.
     allowed-origin-patterns:
-      - https://quipu-app-angweb-dev-git-*-shizukajikus-projects.vercel.app
       - https://quipu-app-angweb-*-shizukajikus-projects.vercel.app
   # Primer ADMIN (AdminBootstrap): solo se crea si no existe ninguno. Son las únicas variables
   # opcionales con valor vacío por defecto: una vez creado el ADMIN ya no hacen falta.

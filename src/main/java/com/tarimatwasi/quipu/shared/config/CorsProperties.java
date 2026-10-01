@@ -2,6 +2,8 @@ package com.tarimatwasi.quipu.shared.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.cors.CorsConfiguration;
@@ -15,7 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
  *
  * @param allowedOrigins exact origins ({@code app.cors.allowed-origins})
  * @param allowedOriginPatterns origins with a wildcard inside the first label only ({@code
- *     app.cors.allowed-origin-patterns}), matched in full by Spring
+ *     app.cors.allowed-origin-patterns}); the wildcard matches {@code [a-z0-9-]+}, never a dot
  */
 @ConfigurationProperties("app.cors")
 @Validated
@@ -42,12 +44,49 @@ public record CorsProperties(List<String> allowedOrigins, List<String> allowedOr
     var origins = new ArrayList<String>();
     origins.add(primaryOrigin);
     origins.addAll(allowedOrigins);
-    var config = new CorsConfiguration();
+    var config = new WildcardCorsConfiguration(allowedOriginPatterns);
     config.setAllowedOrigins(origins);
-    config.setAllowedOriginPatterns(allowedOriginPatterns);
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE"));
     config.setAllowedHeaders(List.of("Content-Type"));
     config.setAllowCredentials(true);
     return config;
+  }
+
+  /**
+   * Spring's origin patterns turn {@code *} into {@code .*}, which spans dots and so labels. Here
+   * the wildcard is {@code [a-z0-9-]+}; the exact origins keep Spring's semantics. Handler-level
+   * {@code @CrossOrigin} would combine this policy into a plain one and lose the patterns: there is
+   * none, the policy is global.
+   */
+  private static final class WildcardCorsConfiguration extends CorsConfiguration {
+
+    private final List<Pattern> patterns;
+
+    WildcardCorsConfiguration(List<String> origins) {
+      this.patterns = origins.stream().map(WildcardCorsConfiguration::compile).toList();
+    }
+
+    private static Pattern compile(String origin) {
+      var parts = origin.split("\\*", -1);
+      var regex = new StringBuilder();
+      for (int i = 0; i < parts.length; i++) {
+        if (i > 0) {
+          regex.append("[a-z0-9-]+");
+        }
+        regex.append(Pattern.quote(parts[i]));
+      }
+      return Pattern.compile(regex.toString());
+    }
+
+    @Override
+    public @Nullable String checkOrigin(@Nullable String requestOrigin) {
+      var exact = super.checkOrigin(requestOrigin);
+      if (exact != null || requestOrigin == null) {
+        return exact;
+      }
+      return patterns.stream().anyMatch(p -> p.matcher(requestOrigin).matches())
+          ? requestOrigin
+          : null;
+    }
   }
 }

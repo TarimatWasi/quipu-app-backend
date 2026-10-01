@@ -77,34 +77,51 @@ class SecurityConfig {
     validateOrigin(origin, requireHttps, "app.cors.allowed-origin");
   }
 
-  /** BE-SPR-SEC-05: an exact origin (scheme and host, no wildcard and no trailing slash). */
+  /**
+   * Lowercase labels of letters, digits and hyphens: no userinfo, query, fragment or dot at the
+   * end.
+   */
+  private static final String HOST = "[a-z0-9-]+(?:\\.[a-z0-9-]+)*";
+
+  /**
+   * BE-SPR-SEC-05: an exact origin, so strict that a typo fails the startup instead of silently
+   * never matching: lowercase, no userinfo, path, query, fragment or trailing dot. The deployed
+   * profiles (dev and prod) also require https and no port; local allows {@code http} and a port.
+   */
   static void validateOrigin(String origin, boolean requireHttps, String property) {
-    if (!origin.matches("https?://[^/*\\s]+")) {
+    var pattern = requireHttps ? "https://" + HOST : "https?://" + HOST + "(?::\\d{1,5})?";
+    if (!origin.matches(pattern)) {
       throw new IllegalStateException(
           property
-              + " must be an exact origin such as https://app.example.com"
-              + " (no wildcard, path or trailing slash)");
-    }
-    if (requireHttps && !origin.startsWith("https://")) {
-      throw new IllegalStateException(
-          property + " must use https in the dev and prod profiles: " + origin);
+              + " must be an exact origin in lowercase such as https://app.example.com"
+              + (requireHttps ? " (https, no port" : " (no")
+              + ", wildcard, path, userinfo or trailing dot), got: "
+              + origin);
     }
   }
 
   /**
-   * BE-SPR-SEC-05: a pattern keeps a literal prefix of at least 8 characters in the first label and
-   * a literal domain, and allows the wildcard only inside that first label ({@code
-   * https://app-*-team.example.com}). Spring matches the whole origin against the pattern.
-   *
-   * <p>Ceiling: {@code *} also matches dots, so a host such as {@code
-   * app-x.evil.com-team.example.com} would match; only the owner of {@code example.com} can create
-   * hosts under it.
+   * BE-SPR-SEC-05: a pattern is https and lowercase, has no userinfo, port, path or trailing dot,
+   * and allows the wildcard only inside the first DNS label ({@code
+   * https://app-*-team.example.com}) after a literal prefix of 8 or more characters. The literal
+   * tail after the last wildcard has at least 20 characters, so that it carries the suffix bound to
+   * the team ({@code -team.example.com}) and a bare {@code https://app-*.vercel.app} is refused.
+   * {@link CorsProperties} matches the wildcard as {@code [a-z0-9-]+}: it never spans a dot.
    */
   static void validateOriginPattern(String pattern) {
-    if (!pattern.matches("https://[a-z0-9-]{8,}[a-z0-9*-]*(?:\\.[a-z0-9-]+)+")) {
+    boolean wellFormed = pattern.matches("https://[a-z0-9*-]+(?:\\.[a-z0-9-]+)+");
+    int firstWildcard = pattern.indexOf('*');
+    int lastWildcard = pattern.lastIndexOf('*');
+    boolean safe =
+        wellFormed
+            && firstWildcard >= "https://".length() + 8
+            && !pattern.contains("**")
+            && pattern.length() - lastWildcard - 1 >= 20;
+    if (!safe) {
       throw new IllegalStateException(
-          "app.cors.allowed-origin-patterns must be https with a wildcard only inside the first"
-              + " label after a literal prefix of 8 or more characters: "
+          "app.cors.allowed-origin-patterns must be https and lowercase, with the wildcard only"
+              + " inside the first label after a literal prefix of 8 or more characters and a"
+              + " literal tail of 20 or more characters after the last wildcard: "
               + pattern);
     }
   }
