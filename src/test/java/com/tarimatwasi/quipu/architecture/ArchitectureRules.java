@@ -14,6 +14,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.properties.HasOwner;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -73,22 +74,20 @@ final class ArchitectureRules {
               "..port.out..",
               "..adapter.in..",
               "..adapter.out..",
-              "..config..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+              "..config..");
 
   @ArchTest static final ArchRule BE_SPR_ARQ_03 = ArchitectureConditions.layersFollowTheTable(ROOT);
 
+  // TAR-62 PR2: remove FreezingArchRule when AuditableEntity leaves shared.domain.
   @ArchTest
   static final ArchRule BE_SPR_ARQ_08 =
-      classes()
-          .that()
-          .resideInAPackage("..domain..")
-          .should()
-          .onlyDependOnClassesThat()
-          .resideInAnyPackage("java..", "org.jspecify..", "..domain..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+      FreezingArchRule.freeze(
+          classes()
+              .that()
+              .resideInAPackage("..domain..")
+              .should()
+              .onlyDependOnClassesThat()
+              .resideInAnyPackage("java..", "org.jspecify..", "..domain.."));
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_CONTROLLERS =
@@ -96,9 +95,7 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(RestController.class)
           .should()
-          .haveSimpleNameEndingWith("Controller")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .haveSimpleNameEndingWith("Controller");
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_USE_CASES =
@@ -110,9 +107,7 @@ final class ArchitectureRules {
           .and()
           .doNotHaveSimpleName("package-info")
           .should()
-          .haveSimpleNameEndingWith("UseCase")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .haveSimpleNameEndingWith("UseCase");
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_OUT_PORTS =
@@ -124,9 +119,7 @@ final class ArchitectureRules {
           .and()
           .doNotHaveSimpleName("package-info")
           .should()
-          .haveSimpleNameEndingWith("Port")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .haveSimpleNameEndingWith("Port");
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_ENTITIES =
@@ -134,9 +127,7 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(jakarta.persistence.Entity.class)
           .should()
-          .haveSimpleNameEndingWith("JpaEntity")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .haveSimpleNameEndingWith("JpaEntity");
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_REPOSITORIES =
@@ -144,9 +135,7 @@ final class ArchitectureRules {
           .that()
           .areAssignableTo(Repository.class)
           .should()
-          .haveSimpleNameEndingWith("JpaRepository")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .haveSimpleNameEndingWith("JpaRepository");
 
   @ArchTest
   static final ArchRule BE_SPR_ARQ_09_PROPERTIES =
@@ -155,7 +144,7 @@ final class ArchitectureRules {
           .areAnnotatedWith(ConfigurationProperties.class)
           .should()
           .haveSimpleNameEndingWith("Properties")
-          // empty until TAR-62: there is no module code for this scope yet
+          // empty until PR3 adds the @ConfigurationProperties records
           .allowEmptyShould(true);
 
   @ArchTest
@@ -164,9 +153,7 @@ final class ArchitectureRules {
           .that()
           .areAssignableTo(Throwable.class)
           .should()
-          .haveSimpleNameEndingWith("Exception")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .haveSimpleNameEndingWith("Exception");
 
   // --- Inyección (DI) ---
 
@@ -189,9 +176,7 @@ final class ArchitectureRules {
           .should()
           .beFinal()
           .andShould()
-          .notBeAnnotatedWith(Autowired.class)
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .notBeAnnotatedWith(Autowired.class);
 
   @ArchTest
   static final ArchRule BE_SPR_DI_06 =
@@ -204,7 +189,11 @@ final class ArchitectureRules {
 
   // --- Configuración (CFG) ---
 
-  @ArchTest static final ArchRule BE_SPR_CFG_01 = ArchitectureConditions.propertiesPrefixIsApp();
+  @ArchTest
+  static final ArchRule BE_SPR_CFG_01 =
+      ArchitectureConditions.propertiesPrefixIsApp()
+          // empty until PR3 adds the @ConfigurationProperties records
+          .allowEmptyShould(true);
 
   @ArchTest
   static final ArchRule BE_SPR_CFG_02 =
@@ -217,29 +206,35 @@ final class ArchitectureRules {
           .beAnnotatedWith(Validated.class)
           .andShould()
           .notBeAnnotatedWith(Component.class)
-          // empty until TAR-62: there is no module code for this scope yet
+          // empty until PR3 adds the @ConfigurationProperties records
           .allowEmptyShould(true);
 
-  @ArchTest static final ArchRule BE_SPR_CFG_03 = ArchitectureConditions.atMostOneValuePerClass();
+  // TAR-62 PR3: remove FreezingArchRule when JwtProperties, R2Properties, ResendProperties and
+  // AdminProperties replace the multiple @Value.
+  @ArchTest
+  static final ArchRule BE_SPR_CFG_03 =
+      FreezingArchRule.freeze(ArchitectureConditions.atMostOneValuePerClass());
 
   @ArchTest static final ArchRule BE_SPR_CFG_04 = ArchitectureConditions.noValueOnFieldsNorSpel();
 
   // --- Código (COD, NUL) ---
 
+  // TAR-62 PR3: remove FreezingArchRule when JwtTokenProvider uses the injected Clock.
   @ArchTest
   static final ArchRule BE_SPR_COD_03 =
-      noClasses()
-          .should()
-          .callMethod(Instant.class, "now")
-          .orShould()
-          .callMethod(LocalDate.class, "now")
-          .orShould()
-          .callMethod(LocalDateTime.class, "now")
-          .orShould()
-          .callMethod(ZonedDateTime.class, "now")
-          .orShould()
-          .callMethod(System.class, "currentTimeMillis")
-          .because("a Clock is injected instead (the clock zone is fixed by the profile)");
+      FreezingArchRule.freeze(
+          noClasses()
+              .should()
+              .callMethod(Instant.class, "now")
+              .orShould()
+              .callMethod(LocalDate.class, "now")
+              .orShould()
+              .callMethod(LocalDateTime.class, "now")
+              .orShould()
+              .callMethod(ZonedDateTime.class, "now")
+              .orShould()
+              .callMethod(System.class, "currentTimeMillis")
+              .because("a Clock is injected instead (the clock zone is fixed by the profile)"));
 
   @ArchTest static final ArchRule BE_SPR_COD_04 = NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS;
 
@@ -265,23 +260,21 @@ final class ArchitectureRules {
           .that()
           .areAnnotatedWith(RestController.class)
           .should()
-          .resideInAPackage("..adapter.in.rest..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .resideInAPackage("..adapter.in.rest..");
 
+  // TAR-62 PR2: remove FreezingArchRule when bff reaches auth only through port.in types.
   @ArchTest
   static final ArchRule BE_SPR_WEB_02 =
-      noClasses()
-          .that()
-          .resideInAPackage("..adapter.in.rest..")
-          .should()
-          .dependOnClassesThat()
-          .areAnnotatedWith(jakarta.persistence.Entity.class)
-          .orShould()
-          .dependOnClassesThat()
-          .resideInAPackage("..domain..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+      FreezingArchRule.freeze(
+          noClasses()
+              .that()
+              .resideInAPackage("..adapter.in.rest..")
+              .should()
+              .dependOnClassesThat()
+              .areAnnotatedWith(jakarta.persistence.Entity.class)
+              .orShould()
+              .dependOnClassesThat()
+              .resideInAPackage("..domain.."));
 
   @ArchTest static final ArchRule BE_SPR_WEB_03 = ArchitectureConditions.requestBodyIsValidated();
 
@@ -294,9 +287,7 @@ final class ArchitectureRules {
           .implement(
               com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage("..port.in.."))
           .should()
-          .resideInAPackage("..application..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+          .resideInAPackage("..application..");
 
   @ArchTest
   static final ArchRule BE_SPR_APP_02 =
@@ -306,36 +297,37 @@ final class ArchitectureRules {
           .should()
           .beDeclaredInClassesThat()
           .resideInAPackage("..application..")
-          // empty until TAR-62: there is no module code for this scope yet
+          // empty until the first @Transactional use case
           .allowEmptyShould(true);
 
   // --- Persistencia (DAT) ---
 
+  // TAR-62 PR2: remove FreezingArchRule when AuditableEntity moves to
+  // shared.adapter.out.persistence.
   @ArchTest
   static final ArchRule BE_SPR_DAT_01 =
-      classes()
-          .that()
-          .areAnnotatedWith(jakarta.persistence.Entity.class)
-          .or()
-          .areAnnotatedWith(jakarta.persistence.MappedSuperclass.class)
-          .or()
-          .areAnnotatedWith(jakarta.persistence.Embeddable.class)
-          .should()
-          .resideInAPackage("..adapter.out.persistence..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+      FreezingArchRule.freeze(
+          classes()
+              .that()
+              .areAnnotatedWith(jakarta.persistence.Entity.class)
+              .or()
+              .areAnnotatedWith(jakarta.persistence.MappedSuperclass.class)
+              .or()
+              .areAnnotatedWith(jakarta.persistence.Embeddable.class)
+              .should()
+              .resideInAPackage("..adapter.out.persistence.."));
 
+  // TAR-62 PR2: remove FreezingArchRule when the Spring Data repository becomes package-private.
   @ArchTest
   static final ArchRule BE_SPR_DAT_02 =
-      classes()
-          .that()
-          .areAssignableTo(Repository.class)
-          .should()
-          .bePackagePrivate()
-          .andShould()
-          .resideInAPackage("..adapter.out.persistence..")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+      FreezingArchRule.freeze(
+          classes()
+              .that()
+              .areAssignableTo(Repository.class)
+              .should()
+              .bePackagePrivate()
+              .andShould()
+              .resideInAPackage("..adapter.out.persistence.."));
 
   @ArchTest static final ArchRule BE_SPR_DAT_07 = ArchitectureConditions.toOneRelationsAreLazy();
 
@@ -384,13 +376,14 @@ final class ArchitectureRules {
   @ArchTest
   static final ArchRule QP_SPRMONO_API_03 = ArchitectureConditions.newApiVersionsCoexistWithV1();
 
+  // TAR-62 PR2: remove FreezingArchRule when AuditableEntity moves to
+  // shared.adapter.out.persistence.
   @ArchTest
   static final ArchRule QP_SPRMONO_DAT_01 =
-      classes()
-          .that()
-          .areAnnotatedWith(jakarta.persistence.Entity.class)
-          .should()
-          .beAssignableTo(ROOT + ".shared.adapter.out.persistence.AuditableEntity")
-          // empty until TAR-62: there is no module code for this scope yet
-          .allowEmptyShould(true);
+      FreezingArchRule.freeze(
+          classes()
+              .that()
+              .areAnnotatedWith(jakarta.persistence.Entity.class)
+              .should()
+              .beAssignableTo(ROOT + ".shared.adapter.out.persistence.AuditableEntity"));
 }

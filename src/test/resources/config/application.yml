@@ -1,0 +1,5 @@
+# Valores solo para pruebas (no son secretos): el secreto JWT nunca tiene valor por defecto en
+# src/main/resources, así que las pruebas lo fijan aquí.
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-test-secret

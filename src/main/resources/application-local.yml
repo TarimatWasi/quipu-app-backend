@@ -10,6 +10,23 @@ spring:
 app:
   cors:
     allowed-origin: http://localhost:4200
+  # Primer ADMIN (AdminBootstrap): solo se crea si no existe ninguno. Son las únicas variables
+  # opcionales con valor vacío por defecto: una vez creado el ADMIN ya no hacen falta.
+  admin:
+    document-number: ${ADMIN_DOCUMENT_NUMBER:}
+    email: ${ADMIN_EMAIL:}
+    initial-password: ${ADMIN_INITIAL_PASSWORD:}
+  # Servicios externos opcionales: sin credenciales, los diagnósticos reportan FAIL en vez de
+  # tumbar el arranque.
+  r2:
+    account-id: ${R2_ACCOUNT_ID:}
+    access-key-id: ${R2_ACCESS_KEY_ID:}
+    secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+    endpoint: ${R2_ENDPOINT:}
+    bucket-name: ${R2_BUCKET_NAME:}
+  resend:
+    api-key: ${RESEND_API_KEY:}
+    from-email: ${RESEND_FROM_EMAIL:onboarding@resend.dev}
 
 springdoc:
   api-docs:

@@ -10,10 +10,24 @@ spring:
     url: ${DATABASE_URL}
 
 app:
-  admin:
-    required: true # sin ADMIN y sin variables ADMIN_* el arranque falla (AdminProperties, TAR-62)
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN} # origin exacto del frontend, https, sin "/" final
+  # Primer ADMIN (AdminBootstrap): solo se crea si no existe ninguno. Son las únicas variables
+  # opcionales con valor vacío por defecto: una vez creado el ADMIN ya no hacen falta.
+  admin:
+    required: true # sin ADMIN y sin variables ADMIN_* el arranque falla
+    document-number: ${ADMIN_DOCUMENT_NUMBER:}
+    email: ${ADMIN_EMAIL:}
+    initial-password: ${ADMIN_INITIAL_PASSWORD:}
+  r2:
+    account-id: ${R2_ACCOUNT_ID}
+    access-key-id: ${R2_ACCESS_KEY_ID}
+    secret-access-key: ${R2_SECRET_ACCESS_KEY}
+    endpoint: ${R2_ENDPOINT}
+    bucket-name: ${R2_BUCKET_NAME}
+  resend:
+    api-key: ${RESEND_API_KEY}
+    from-email: ${RESEND_FROM_EMAIL}
 
 springdoc:
   api-docs:

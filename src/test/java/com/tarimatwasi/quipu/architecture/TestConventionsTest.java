@@ -1,5 +1,6 @@
 package com.tarimatwasi.quipu.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -30,4 +31,25 @@ class TestConventionsTest {
   @ArchTest
   static final ArchRule BE_SPR_TST_07 =
       noClasses().should().callMethod(Thread.class, "sleep", long.class);
+
+  /** ADR-006: bodyless state-changing requests are defended only by CORS; the test must exist. */
+  @ArchTest
+  static final ArchRule ADR_006_CONTRACT_TEST =
+      methods()
+          .that()
+          .haveName("bodyless_cross_site_request_is_stopped_by_cors")
+          .should()
+          .beDeclaredInClassesThat()
+          .haveSimpleName("SecurityContractTest")
+          .because("ADR-006: a bodyless request relies on CORS rejecting a foreign Origin");
+
+  @ArchTest
+  static final ArchRule ADR_006_CONTROLLER_TEST =
+      methods()
+          .that()
+          .haveName("crossSiteBodilessPostIsStoppedByCors")
+          .should()
+          .beDeclaredInClassesThat()
+          .haveSimpleName("AuthBffControllerTest")
+          .because("ADR-006: the login endpoint is covered end to end");
 }

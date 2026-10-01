@@ -54,4 +54,31 @@ class ArchitectureScopesTest {
         .as("filters")
         .isNotEmpty();
   }
+
+  @Test
+  void moduleScopes_areNotEmpty() {
+    // The imported modules (auth, bff) give every structural rule something to select.
+    assertThat(names(c -> c.getPackageName().contains(".domain"))).as("domain").isNotEmpty();
+    assertThat(names(c -> c.getPackageName().contains(".application")))
+        .as("application")
+        .isNotEmpty();
+    assertThat(names(c -> c.getPackageName().contains(".port.in"))).as("port.in").isNotEmpty();
+    assertThat(names(c -> c.getPackageName().contains(".port.out"))).as("port.out").isNotEmpty();
+    assertThat(names(c -> c.getPackageName().contains(".adapter.in.rest")))
+        .as("rest adapters")
+        .isNotEmpty();
+    assertThat(names(c -> c.getPackageName().contains(".adapter.out.persistence")))
+        .as("persistence adapters")
+        .isNotEmpty();
+    assertThat(
+            names(
+                c ->
+                    c.isAnnotatedWith(
+                        org.springframework.web.bind.annotation.RestController.class)))
+        .as("controllers")
+        .isNotEmpty();
+    assertThat(names(c -> c.isAnnotatedWith(jakarta.persistence.Entity.class)))
+        .as("entities")
+        .isNotEmpty();
+  }
 }

@@ -1,5 +1,7 @@
 package com.tarimatwasi.quipu.shared.config;
 
+import com.tarimatwasi.quipu.auth.adapter.out.security.JwtAuthenticationFilter;
+import com.tarimatwasi.quipu.auth.adapter.out.security.JwtTokenProvider;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +24,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 class SecurityConfig {
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable()) // compensated by JsonOnlyFilter and exact CORS (ADR-006)
+  SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider)
+      throws Exception {
+    // CSRF is disabled on purpose (ADR-006): JsonOnlyFilter covers requests with a body (415);
+    // bodyless ones pass it and rely on exact-origin CORS rejecting a foreign Origin.
+    http.csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults()) // uses the corsConfigurationSource bean
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .headers(
@@ -34,11 +39,15 @@ class SecurityConfig {
             e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers("/actuator/health", "/actuator/health/**")
+                a.requestMatchers(
+                        "/actuator/health", "/actuator/health/**", "/bff/auth/login", "/error")
                     .permitAll()
+                    .requestMatchers("/bff/diagnostics/**")
+                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
-        .addFilterBefore(new JsonOnlyFilter(), AuthorizationFilter.class);
+        .addFilterBefore(new JsonOnlyFilter(), AuthorizationFilter.class)
+        .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), AuthorizationFilter.class);
     return http.build();
   }
 
