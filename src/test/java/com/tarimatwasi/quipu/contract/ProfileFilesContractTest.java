@@ -2,12 +2,17 @@ package com.tarimatwasi.quipu.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tarimatwasi.quipu.bff.adapter.in.rest.SessionCookieProperties;
+import com.tarimatwasi.quipu.shared.config.CorsProperties;
 import java.io.IOException;
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.RandomValuePropertySource;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.EnumerablePropertySource;
@@ -125,5 +130,65 @@ class ProfileFilesContractTest {
     assertThat(load("application-dev.yml").get("springdoc.api-docs.enabled")).isEqualTo(true);
     assertThat(load("application-prod.yml").get("springdoc.api-docs.enabled")).isEqualTo(false);
     assertThat(load("application-prod.yml").get("springdoc.swagger-ui.enabled")).isEqualTo(false);
+  }
+
+  /** TAR-75: the session cookie is Lax in every profile unless a product overrides it. */
+  @ParameterizedTest
+  @ValueSource(strings = {"application.yml", "application-local.yml"})
+  void sessionCookie_isLaxByDefault(String file) throws IOException {
+    var all = load("application.yml");
+    all.putAll(load(file));
+
+    assertThat(all.get("app.session.same-site")).isEqualTo("lax");
+  }
+
+  /** TAR-75: the cookie and the token expire together, from the same property of the real YAML. */
+  @Test
+  void sessionCookieMaxAge_equalsTheJwtLifetimeOfTheRealConfiguration() throws IOException {
+    var env = new MockEnvironment();
+    new YamlPropertySourceLoader()
+        .load("base", new ClassPathResource("application.yml"))
+        .forEach(env.getPropertySources()::addLast);
+
+    var cookie = Binder.get(env).bind("app.session", SessionCookieProperties.class).get();
+    var jwtMinutes = Long.parseLong(String.valueOf(env.getProperty("app.jwt.expiration-minutes")));
+
+    assertThat(cookie.maxAge()).isEqualTo(Duration.ofMinutes(jwtMinutes));
+  }
+
+  /**
+   * TAR-75: the Vercel rewrite keeps the Origin of the Vercel host while the Host is the backend,
+   * so dev lists the host of the project: the primary origin from CORS_ALLOWED_ORIGIN, the second
+   * production alias and the branch and deployment aliases as anchored patterns. Nothing else.
+   */
+  @Test
+  void dev_corsAllowsTheVercelAliasesAndNothingElse() throws IOException {
+    var primary = "https://quipu-app-angweb-dev.vercel.app";
+    var env = new MockEnvironment().withProperty("CORS_ALLOWED_ORIGIN", primary);
+    new YamlPropertySourceLoader()
+        .load("dev", new ClassPathResource("application-dev.yml"))
+        .forEach(env.getPropertySources()::addLast);
+
+    var cors = Binder.get(env).bind("app.cors", CorsProperties.class).get();
+    var config = cors.configuration(primary, true);
+
+    List.of(
+            primary,
+            "https://quipu-app-angweb-dev-shizukajikus-projects.vercel.app",
+            "https://quipu-app-angweb-dev-git-development-shizukajikus-projects.vercel.app",
+            "https://quipu-app-angweb-9n80jc9hm-shizukajikus-projects.vercel.app")
+        .forEach(origin -> assertThat(config.checkOrigin(origin)).isEqualTo(origin));
+    List.of(
+            "https://quipu-app-angweb-dev.vercel.app.evil.com",
+            "https://evil-quipu-app-angweb-dev-git-x-shizukajikus-projects.vercel.app",
+            "https://quipu-app-angweb-9n80jc9hm-other-projects.vercel.app",
+            "http://quipu-app-angweb-dev.vercel.app")
+        .forEach(origin -> assertThat(config.checkOrigin(origin)).isNull());
+  }
+
+  @Test
+  void prod_listsNoVercelPatternsYet() throws IOException {
+    assertThat(load("application-prod.yml").keySet())
+        .noneMatch(key -> key.startsWith("app.cors.allowed-origin-patterns"));
   }
 }

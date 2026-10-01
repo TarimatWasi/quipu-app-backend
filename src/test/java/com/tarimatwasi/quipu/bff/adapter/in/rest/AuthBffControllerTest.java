@@ -1,5 +1,6 @@
 package com.tarimatwasi.quipu.bff.adapter.in.rest;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -59,6 +60,30 @@ class AuthBffControllerTest {
         .andExpect(jsonPath("$.mustChangePassword").value(true))
         .andExpect(cookie().exists("sessionToken"))
         .andExpect(cookie().httpOnly("sessionToken", true));
+  }
+
+  /**
+   * TAR-75: behind the Vercel rewrite the browser talks to its own origin, so the cookie is
+   * first-party: SameSite=Lax, Secure and HttpOnly, with the lifetime of the JWT (480 minutes).
+   */
+  @Test
+  void loginCookieIsLaxSecureHttpOnlyAndLastsAsLongAsTheToken() throws Exception {
+    var setCookie =
+        mockMvc
+            .perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(ADMIN_LOGIN_BODY))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getHeader("Set-Cookie");
+
+    assertThat(setCookie)
+        .startsWith("sessionToken=")
+        .contains("; Path=/")
+        .contains("; Max-Age=28800")
+        .contains("; Secure")
+        .contains("; HttpOnly")
+        .contains("; SameSite=Lax")
+        .doesNotContain("SameSite=None");
   }
 
   @Test
