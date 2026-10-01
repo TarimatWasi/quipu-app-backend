@@ -21,6 +21,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <p>A request with neither body nor {@code Content-Type} (a bodyless DELETE or action POST) is let
  * through: a cross-site one still carries an {@code Origin} header, which the exact-origin CORS
  * configuration rejects with 403 before this filter runs.
+ *
+ * <p><b>ADR-006 justification:</b> for bodyless state-changing requests this filter does nothing,
+ * so the defense rests entirely on CORS rejecting a foreign {@code Origin}. Two tests keep that
+ * true and must not be deleted: {@code
+ * SecurityContractTest.bodyless_cross_site_request_is_stopped_by_cors} and {@code
+ * AuthBffControllerTest.crossSiteBodilessPostIsStoppedByCors} (enforced by {@code
+ * TestConventionsTest}).
  */
 final class JsonOnlyFilter extends OncePerRequestFilter {
 

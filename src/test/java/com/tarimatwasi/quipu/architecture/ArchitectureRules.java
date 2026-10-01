@@ -276,10 +276,7 @@ final class ArchitectureRules {
               .dependOnClassesThat()
               .resideInAPackage("..domain.."));
 
-  // TAR-62 PR4: remove FreezingArchRule when LoginRequest is validated with @Valid.
-  @ArchTest
-  static final ArchRule BE_SPR_WEB_03 =
-      FreezingArchRule.freeze(ArchitectureConditions.requestBodyIsValidated());
+  @ArchTest static final ArchRule BE_SPR_WEB_03 = ArchitectureConditions.requestBodyIsValidated();
 
   // --- Aplicación (APP) ---
 

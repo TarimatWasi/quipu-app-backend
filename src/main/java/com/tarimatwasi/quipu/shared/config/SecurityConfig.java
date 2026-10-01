@@ -26,7 +26,11 @@ class SecurityConfig {
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider)
       throws Exception {
-    http.csrf(csrf -> csrf.disable()) // compensated by JsonOnlyFilter and exact CORS (ADR-006)
+    // CSRF is disabled on purpose (ADR-006). Body requests are covered by JsonOnlyFilter (415); a
+    // bodyless state-changing request passes that filter, so it is covered only by exact-origin
+    // CORS
+    // rejecting a foreign Origin (see JsonOnlyFilter and its required tests).
+    http.csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults()) // uses the corsConfigurationSource bean
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .headers(

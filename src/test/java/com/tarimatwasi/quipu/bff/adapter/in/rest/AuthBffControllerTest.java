@@ -10,6 +10,8 @@ import com.tarimatwasi.quipu.support.PostgresContainers;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
@@ -115,5 +117,29 @@ class AuthBffControllerTest {
                 .header("Origin", "https://evil.example.com"))
         .andExpect(status().isForbidden())
         .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+  }
+
+  /** QP-SPRMONO-BFF-01: invalid input is a 400 with {code, message, field}, never a 500. */
+  @ParameterizedTest
+  @CsvSource(
+      delimiter = '|',
+      textBlock =
+          """
+          {"documentNumber":"00000000","password":"x"} | documentType
+          {"documentType":null,"documentNumber":"00000000","password":"x"} | documentType
+          {"documentType":"DNI","password":"x"} | documentNumber
+          {"documentType":"DNI","documentNumber":"   ","password":"x"} | documentNumber
+          {"documentType":"DNI","documentNumber":"00000000"} | password
+          {"documentType":"DNI","documentNumber":"00000000","password":""} | password
+          """)
+  void loginWithMissingOrBlankFieldsReturns400WithTheFieldName(String body, String field)
+      throws Exception {
+    mockMvc
+        .perform(post(LOGIN).contentType(MediaType.APPLICATION_JSON).content(body))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+        .andExpect(jsonPath("$.field").value(field))
+        .andExpect(jsonPath("$.message").isNotEmpty())
+        .andExpect(cookie().doesNotExist("sessionToken"));
   }
 }
