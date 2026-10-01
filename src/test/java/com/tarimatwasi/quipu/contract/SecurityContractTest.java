@@ -41,7 +41,7 @@ class SecurityContractTest {
   void state_changing_request_with_a_non_json_body_is_rejected_with_415() throws Exception {
     mvc.perform(post("/api/v1/anything").contentType(MediaType.TEXT_PLAIN).content("x"))
         .andExpect(status().isUnsupportedMediaType())
-        .andExpect(jsonPath("$.code").value("unsupported_media_type"));
+        .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
   }
 
   @Test

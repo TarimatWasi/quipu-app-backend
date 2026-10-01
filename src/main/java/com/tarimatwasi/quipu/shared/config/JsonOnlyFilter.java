@@ -28,7 +28,7 @@ final class JsonOnlyFilter extends OncePerRequestFilter {
 
   /** BFF error shape (QP-SPRMONO-BFF-01): stable English code, Spanish message. */
   private static final String BODY =
-      "{\"code\":\"unsupported_media_type\",\"message\":\"El contenido debe ser application/json.\"}";
+      "{\"code\":\"UNSUPPORTED_MEDIA_TYPE\",\"message\":\"El contenido debe ser application/json.\"}";
 
   @Override
   protected void doFilterInternal(

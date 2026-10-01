@@ -1,0 +1,2 @@
+Method <com.tarimatwasi.quipu.auth.adapter.out.security.JwtTokenProvider.issue(java.lang.String, java.lang.String)> calls method <java.time.Instant.now()> in (JwtTokenProvider.java:29)
+Method <com.tarimatwasi.quipu.shared.adapter.out.storage.R2PingService.ping()> calls method <java.lang.System.currentTimeMillis()> in (R2PingService.java:34)

@@ -159,8 +159,7 @@ final class ArchitectureConditions {
                       .forEach(
                           route ->
                               events.add(violated(c, c.getName() + " maps the route " + route)));
-                }))
-        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
+                }));
   }
 
   /** QP-SPRMONO-API-03 (structural part): a {@code /api/v2+} route coexists with its v1. */
@@ -196,8 +195,7 @@ final class ArchitectureConditions {
                                 violated(
                                     c, c.getName() + " has /v" + m.group(1) + " without /v1")));
               }
-            })
-        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
+            });
   }
 
   /** BE-SPR-ARQ-03: same-module dependencies between layers follow the guide table. */
@@ -219,8 +217,7 @@ final class ArchitectureConditions {
                       events.add(violated(d, d.getDescription()));
                     }
                   }
-                }))
-        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
+                }));
   }
 
   /** BE-SPR-CFG-01: {@code @ConfigurationProperties} prefixes start with {@code app.}. */
@@ -242,8 +239,7 @@ final class ArchitectureConditions {
                   if (!prefix.startsWith("app.")) {
                     events.add(violated(c, c.getName() + " uses the prefix " + prefix));
                   }
-                }))
-        .allowEmptyShould(true); // empty until TAR-62: no module, controller or properties yet
+                }));
   }
 
   /** BE-SPR-TST-05: {@code FooTest} lives in the package of {@code Foo}. */

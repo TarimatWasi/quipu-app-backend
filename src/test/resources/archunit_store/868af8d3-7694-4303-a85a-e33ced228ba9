@@ -1,0 +1,1 @@
+com.tarimatwasi.quipu.bff.adapter.in.rest.AuthBffController.login(com.tarimatwasi.quipu.bff.adapter.in.rest.AuthBffController$LoginRequest, jakarta.servlet.http.HttpServletResponse) lacks @Valid

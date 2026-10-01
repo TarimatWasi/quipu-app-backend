@@ -21,6 +21,19 @@ class ProfileFilesContractTest {
   /** A placeholder with a default, such as {@code ${PORT:8080}}. */
   private static final Pattern PLACEHOLDER_WITH_DEFAULT = Pattern.compile("\\$\\{[^}]*:[^}]*}");
 
+  /**
+   * The only optional variables of the strict profiles: once the first ADMIN exists they are no
+   * longer needed (AdminBootstrap), so an empty default is legitimate.
+   */
+  private static final Pattern OPTIONAL_ADMIN_VARIABLE =
+      Pattern.compile("\\$\\{ADMIN_(DOCUMENT_NUMBER|EMAIL|INITIAL_PASSWORD):}");
+
+  private static boolean hasDefault(String value) {
+    return PLACEHOLDER_WITH_DEFAULT
+        .matcher(OPTIONAL_ADMIN_VARIABLE.matcher(value).replaceAll(""))
+        .find();
+  }
+
   private static Map<String, Object> load(String file) throws IOException {
     var sources = new YamlPropertySourceLoader().load(file, new ClassPathResource(file));
     var all = new java.util.HashMap<String, Object>();
@@ -41,7 +54,7 @@ class ProfileFilesContractTest {
     assertThat(base.get("springdoc.api-docs.enabled")).isEqualTo(false);
     assertThat(base.get("springdoc.swagger-ui.enabled")).isEqualTo(false);
     assertThat(base.values().stream().map(String::valueOf))
-        .noneMatch(v -> PLACEHOLDER_WITH_DEFAULT.matcher(v).find());
+        .noneMatch(ProfileFilesContractTest::hasDefault);
   }
 
   @ParameterizedTest
@@ -50,7 +63,7 @@ class ProfileFilesContractTest {
     var profile = load(file);
 
     assertThat(profile.values().stream().map(String::valueOf))
-        .noneMatch(v -> PLACEHOLDER_WITH_DEFAULT.matcher(v).find());
+        .noneMatch(ProfileFilesContractTest::hasDefault);
     assertThat(profile.get("app.admin.required")).isEqualTo(true);
     assertThat(profile)
         .containsKeys("server.port", "spring.datasource.url", "app.cors.allowed-origin");
