@@ -1,32 +1,42 @@
-# Perfil local (por defecto): máquina del desarrollador. Es el único perfil con valores por
-# defecto; dev y prod no los tienen.
+# Perfil local (por defecto): máquina del desarrollador. Es autónomo: apunta a servicios en
+# localhost y NO lee variables de entorno (TAR-69). La máquina de quien desarrolla puede tener
+# credenciales reales de Neon, R2 o Resend en su entorno; este perfil no puede usarlas ni
+# filtrarlas. ProfileFilesContractTest falla si aparece un ${...} que no sea random.uuid.
+# dev y prod son estrictos y sí leen su configuración del entorno.
 server:
-  port: ${PORT:8080}
+  port: 8080
 
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/quipu}
+    # Postgres local sin contraseña (trust):
+    #   docker run -d --name quipu-pg -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust \
+    #     -e POSTGRES_USER=quipu -e POSTGRES_DB=quipu postgres:17
+    url: jdbc:postgresql://localhost:5432/quipu
+    username: quipu
 
 app:
   cors:
     allowed-origin: http://localhost:4200
-  # Primer ADMIN (AdminBootstrap): solo se crea si no existe ninguno. Son las únicas variables
-  # opcionales con valor vacío por defecto: una vez creado el ADMIN ya no hacen falta.
+  jwt:
+    # Aleatorio en cada arranque: ningún secreto entra al repositorio público y las sesiones
+    # locales se reinician con la aplicación.
+    secret: ${random.uuid}${random.uuid}
+  # Sin ADMIN en local: no hay contraseña inicial que versionar (ver la prueba del perfil).
   admin:
-    document-number: ${ADMIN_DOCUMENT_NUMBER:}
-    email: ${ADMIN_EMAIL:}
-    initial-password: ${ADMIN_INITIAL_PASSWORD:}
-  # Servicios externos opcionales: sin credenciales, los diagnósticos reportan FAIL en vez de
-  # tumbar el arranque.
+    document-number: ""
+    email: ""
+    initial-password: ""
+  # Servicios externos sin credenciales: los diagnósticos reportan FAIL en vez de tumbar el
+  # arranque.
   r2:
-    account-id: ${R2_ACCOUNT_ID:}
-    access-key-id: ${R2_ACCESS_KEY_ID:}
-    secret-access-key: ${R2_SECRET_ACCESS_KEY:}
-    endpoint: ${R2_ENDPOINT:}
-    bucket-name: ${R2_BUCKET_NAME:}
+    account-id: ""
+    access-key-id: ""
+    secret-access-key: ""
+    endpoint: ""
+    bucket-name: ""
   resend:
-    api-key: ${RESEND_API_KEY:}
-    from-email: ${RESEND_FROM_EMAIL:onboarding@resend.dev}
+    api-key: ""
+    from-email: onboarding@resend.dev
 
 springdoc:
   api-docs:
