@@ -32,7 +32,7 @@
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <checkstyle.version>14.3.0</checkstyle.version>
     <jacoco.version>0.8.15</jacoco.version>
-    <jjwt.version>0.12.6</jjwt.version>
+    <jjwt.version>0.13.0</jjwt.version>
     <awssdk.version>2.46.7</awssdk.version>
   </properties>
 
