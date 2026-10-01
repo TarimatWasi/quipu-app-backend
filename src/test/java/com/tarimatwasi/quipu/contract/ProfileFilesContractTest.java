@@ -8,9 +8,12 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.env.RandomValuePropertySource;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.core.env.EnumerablePropertySource;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.mock.env.MockEnvironment;
 
 /**
  * The three Spring profiles (Perfil técnico de Quipu): local is the default and the only one with
@@ -75,6 +78,45 @@ class ProfileFilesContractTest {
     assertThat(load(file).entrySet())
         .filteredOn(e -> e.getKey().startsWith("server.error.include-"))
         .allMatch(e -> "never".equals(e.getValue()));
+  }
+
+  /**
+   * The local profile is self-contained (TAR-69): the machine of a developer holds real credentials
+   * in its environment, so no local value may be read from it. The only placeholder allowed is
+   * Boot's own {@code random.*} source, which is not the environment.
+   */
+  @Test
+  void local_referencesNoEnvironmentPlaceholder() throws IOException {
+    assertThat(load("application-local.yml").values().stream().map(String::valueOf))
+        .noneMatch(value -> Pattern.compile("\\$\\{(?!random\\.uuid})").matcher(value).find());
+  }
+
+  @Test
+  void local_isFullyResolvableWithoutAnyEnvironment() throws IOException {
+    // MockEnvironment has neither system properties nor environment variables: a placeholder that
+    // needs JWT_SECRET, DATABASE_URL or similar cannot be resolved here and throws.
+    var env = new MockEnvironment();
+    var sources = new java.util.ArrayList<PropertySource<?>>();
+    sources.addAll(
+        new YamlPropertySourceLoader()
+            .load("local", new ClassPathResource("application-local.yml")));
+    sources.addAll(
+        new YamlPropertySourceLoader().load("base", new ClassPathResource("application.yml")));
+    sources.forEach(env.getPropertySources()::addLast);
+    env.getPropertySources().addLast(new RandomValuePropertySource());
+
+    var names = new java.util.TreeSet<String>();
+    sources.forEach(
+        s -> names.addAll(java.util.List.of(((EnumerablePropertySource<?>) s).getPropertyNames())));
+    names.forEach(env::getProperty);
+
+    assertThat(env.getProperty("spring.datasource.url"))
+        .isEqualTo("jdbc:postgresql://localhost:5432/quipu");
+    assertThat(env.getProperty("spring.datasource.username")).isEqualTo("quipu");
+    assertThat(env.containsProperty("spring.datasource.password")).isFalse();
+    assertThat(env.getProperty("server.port")).isEqualTo("8080");
+    assertThat(env.getProperty("app.cors.allowed-origin")).isEqualTo("http://localhost:4200");
+    assertThat(env.getProperty("app.jwt.secret")).hasSizeGreaterThanOrEqualTo(64);
   }
 
   @Test
