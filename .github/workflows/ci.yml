@@ -76,7 +76,7 @@ jobs:
           adminpw=$(openssl rand -hex 12)
           echo "::add-mask::$pgpass"; echo "::add-mask::$jwt"; echo "::add-mask::$adminpw"
           docker run -d --name pg --network quipu-ci \
-            -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_USER=quipu -e POSTGRES_DB=quipu \
+            -e "POSTGRES_PASSWORD=$pgpass" -e POSTGRES_USER=quipu -e POSTGRES_DB=quipu \
             postgres:17 >/dev/null
           for i in $(seq 1 30); do docker exec pg pg_isready -U quipu -d quipu >/dev/null 2>&1 && break; sleep 1; done
           docker exec pg pg_isready -U quipu -d quipu
