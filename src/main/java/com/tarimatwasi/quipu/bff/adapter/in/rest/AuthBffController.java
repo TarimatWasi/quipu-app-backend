@@ -20,10 +20,15 @@ public class AuthBffController {
 
   private final LoginUseCase loginUseCase;
   private final JwtTokenProvider jwtTokenProvider;
+  private final SessionCookieProperties sessionCookie;
 
-  public AuthBffController(LoginUseCase loginUseCase, JwtTokenProvider jwtTokenProvider) {
+  public AuthBffController(
+      LoginUseCase loginUseCase,
+      JwtTokenProvider jwtTokenProvider,
+      SessionCookieProperties sessionCookie) {
     this.loginUseCase = loginUseCase;
     this.jwtTokenProvider = jwtTokenProvider;
+    this.sessionCookie = sessionCookie;
   }
 
   public record LoginRequest(
@@ -45,7 +50,8 @@ public class AuthBffController {
         ResponseCookie.from("sessionToken", token)
             .httpOnly(true)
             .secure(true)
-            .sameSite("None")
+            .sameSite(sessionCookie.sameSite().attribute())
+            .maxAge(sessionCookie.maxAge())
             .path("/")
             .build();
     response.addHeader("Set-Cookie", cookie.toString());

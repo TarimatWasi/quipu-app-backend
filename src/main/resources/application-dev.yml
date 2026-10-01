@@ -12,6 +12,14 @@ spring:
 app:
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN} # origin exacto del frontend, https, sin "/" final
+    # La reescritura de Vercel (/bff) conserva el Origin del host de Vercel (TAR-75): se listan el
+    # segundo alias de producción y, con comodín solo dentro de la primera etiqueta, los alias de
+    # rama y los despliegues por hash del proyecto. Cualquier otro origen recibe 403.
+    allowed-origins:
+      - https://quipu-app-angweb-dev-shizukajikus-projects.vercel.app
+    allowed-origin-patterns:
+      - https://quipu-app-angweb-dev-git-*-shizukajikus-projects.vercel.app
+      - https://quipu-app-angweb-*-shizukajikus-projects.vercel.app
   # Primer ADMIN (AdminBootstrap): solo se crea si no existe ninguno. Son las únicas variables
   # opcionales con valor vacío por defecto: una vez creado el ADMIN ya no hacen falta.
   admin:
