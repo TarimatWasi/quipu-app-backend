@@ -10,9 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.tarimatwasi.quipu.auth.adapter.out.security.JwtTokenProvider;
 import com.tarimatwasi.quipu.support.PostgresContainers;
+import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.Cookie;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,6 +28,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -252,6 +257,27 @@ class AuthBffControllerTest {
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("AUTH_PASSWORD_CHANGE_REQUIRED"))
         .andExpect(jsonPath("$.message").isNotEmpty());
+  }
+
+  /** Rolling deployment: a token without the mark of an account that must change is not free. */
+  @Test
+  void aTokenFromBeforeTheMarkIsStillForcedWhenTheAccountMustChangeItsPassword() throws Exception {
+    String id = jdbc.queryForObject("SELECT id::text FROM users", String.class);
+    SecretKey signingKey =
+        (SecretKey) Objects.requireNonNull(ReflectionTestUtils.getField(jwtTokenProvider, "key"));
+    String legacy =
+        Jwts.builder()
+            .subject(id)
+            .claim("role", "ADMIN")
+            .expiration(Date.from(Instant.now().plusSeconds(600)))
+            .signWith(signingKey, Jwts.SIG.HS256)
+            .compact();
+
+    assertThat(jwtTokenProvider.parse(legacy)).as("legacy token parses").isPresent();
+    mockMvc
+        .perform(get("/bff/diagnostics/ping-services").cookie(new Cookie("sessionToken", legacy)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("AUTH_PASSWORD_CHANGE_REQUIRED"));
   }
 
   /** A stale pending cookie must not lock the browser out of logging in again. */
