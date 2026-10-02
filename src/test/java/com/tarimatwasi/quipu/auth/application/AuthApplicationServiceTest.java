@@ -136,6 +136,18 @@ class AuthApplicationServiceTest {
     assertThat(repository.find(user.id()).mustChangePassword()).isTrue();
   }
 
+  /** Four emoji are eight UTF-16 units but only four characters. */
+  @Test
+  void countsCharactersNotUtf16UnitsForTheMinimum() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+    String fourEmoji = "😀".repeat(4);
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, fourEmoji)))
+        .isInstanceOfSatisfying(
+            WeakPasswordException.class,
+            e -> assertThat(e.reason()).isEqualTo(WeakPasswordException.Reason.TOO_SHORT));
+  }
+
   @Test
   void rejectsAPasswordLongerThanBcryptCanHash() {
     UserAccount user = savedUser("Temporal123!", true, "ACTIVE");

@@ -94,7 +94,7 @@ public class AuthApplicationService implements LoginUseCase, ChangePasswordUseCa
   }
 
   private static void requireStrongPassword(String password) {
-    if (password.length() < MIN_PASSWORD_LENGTH) {
+    if (password.codePointCount(0, password.length()) < MIN_PASSWORD_LENGTH) {
       throw new WeakPasswordException(WeakPasswordException.Reason.TOO_SHORT);
     }
     if (password.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
