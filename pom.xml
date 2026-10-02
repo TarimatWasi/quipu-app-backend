@@ -16,6 +16,13 @@
   <name>quipu-app-sprmono</name>
   <description>Quipu - API y BFF (monolito modular hexagonal)</description>
 
+  <licenses>
+    <license>
+      <name>All rights reserved</name>
+      <comments>Proprietary. See the LICENSE file.</comments>
+    </license>
+  </licenses>
+
   <properties>
     <java.version>25</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
