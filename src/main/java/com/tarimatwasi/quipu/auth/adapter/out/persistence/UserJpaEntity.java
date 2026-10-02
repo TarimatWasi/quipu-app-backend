@@ -35,6 +35,11 @@ public class UserJpaEntity extends AuditableEntity {
 
   protected UserJpaEntity() {}
 
+  public void changePassword(String newPasswordHash) {
+    this.passwordHash = newPasswordHash;
+    this.mustChangePassword = false;
+  }
+
   public com.tarimatwasi.quipu.auth.domain.UserAccount toDomain() {
     return new com.tarimatwasi.quipu.auth.domain.UserAccount(
         id,

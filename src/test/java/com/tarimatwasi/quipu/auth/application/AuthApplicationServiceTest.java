@@ -6,11 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.tarimatwasi.quipu.auth.domain.DocumentType;
 import com.tarimatwasi.quipu.auth.domain.Role;
 import com.tarimatwasi.quipu.auth.domain.UserAccount;
+import com.tarimatwasi.quipu.auth.port.in.ChangePasswordUseCase.ChangePasswordCommand;
+import com.tarimatwasi.quipu.auth.port.in.ChangePasswordUseCase.ChangePasswordResult;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginCommand;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginResult;
+import com.tarimatwasi.quipu.auth.port.in.PasswordUnchangedException;
+import com.tarimatwasi.quipu.auth.port.in.WeakPasswordException;
 import com.tarimatwasi.quipu.auth.port.out.UserRepositoryPort;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,7 +29,11 @@ class AuthApplicationServiceTest {
   @BeforeEach
   void setUp() {
     repository = new InMemoryUserRepository();
-    service = new AuthApplicationService(repository, encoder);
+    service =
+        new AuthApplicationService(
+            repository,
+            encoder,
+            (userId, role, mustChange) -> userId + ":" + role + ":" + mustChange);
   }
 
   @Test
@@ -75,16 +84,177 @@ class AuthApplicationServiceTest {
         .isInstanceOf(InvalidCredentialsException.class);
   }
 
+  private UserAccount savedUser(String rawPassword, boolean mustChangePassword, String status) {
+    UserAccount user =
+        new UserAccount(
+            UUID.randomUUID(),
+            "user@tarimatwasi.local",
+            DocumentType.DNI,
+            "11111111",
+            encoder.encode(rawPassword),
+            Role.GUEST,
+            null,
+            mustChangePassword,
+            status);
+    repository.save(user);
+    return user;
+  }
+
+  private ChangePasswordCommand change(UserAccount user, @Nullable String current, String next) {
+    return new ChangePasswordCommand(user.id().toString(), current, next);
+  }
+
+  @Test
+  void changesTheTemporaryPasswordWithoutTheCurrentOne() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+
+    ChangePasswordResult result = service.changePassword(change(user, null, "Nueva12345"));
+
+    assertThat(result.sessionToken()).isEqualTo(user.id() + ":GUEST:false");
+    UserAccount stored = repository.find(user.id());
+    assertThat(encoder.matches("Nueva12345", stored.passwordHash())).isTrue();
+    assertThat(stored.mustChangePassword()).isFalse();
+  }
+
+  @Test
+  void acceptsExactlyEightCharacters() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+
+    service.changePassword(change(user, null, "12345678"));
+
+    assertThat(encoder.matches("12345678", repository.find(user.id()).passwordHash())).isTrue();
+  }
+
+  @Test
+  void rejectsAPasswordShorterThanEightCharacters() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, "1234567")))
+        .isInstanceOfSatisfying(
+            WeakPasswordException.class,
+            e -> assertThat(e.reason()).isEqualTo(WeakPasswordException.Reason.TOO_SHORT));
+    assertThat(repository.find(user.id()).mustChangePassword()).isTrue();
+  }
+
+  /** Four emoji are eight UTF-16 units but only four characters. */
+  @Test
+  void countsCharactersNotUtf16UnitsForTheMinimum() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+    String fourEmoji = "😀".repeat(4);
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, fourEmoji)))
+        .isInstanceOfSatisfying(
+            WeakPasswordException.class,
+            e -> assertThat(e.reason()).isEqualTo(WeakPasswordException.Reason.TOO_SHORT));
+  }
+
+  @Test
+  void rejectsAPasswordLongerThanBcryptCanHash() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+    String tooLong = "ñ".repeat(37); // 74 bytes in UTF-8
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, tooLong)))
+        .isInstanceOfSatisfying(
+            WeakPasswordException.class,
+            e -> assertThat(e.reason()).isEqualTo(WeakPasswordException.Reason.TOO_LONG));
+  }
+
+  @Test
+  void rejectsKeepingTheTemporaryPassword() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, "Temporal123!")))
+        .isInstanceOf(PasswordUnchangedException.class);
+    assertThat(repository.find(user.id()).mustChangePassword()).isTrue();
+  }
+
+  @Test
+  void requiresTheCurrentPasswordOutsideTheForcedFlow() {
+    UserAccount user = savedUser("Actual12345", false, "ACTIVE");
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, "Nueva12345")))
+        .isInstanceOf(InvalidCredentialsException.class);
+  }
+
+  @Test
+  void rejectsAWrongCurrentPasswordEvenInTheForcedFlow() {
+    UserAccount user = savedUser("Temporal123!", true, "ACTIVE");
+
+    assertThatThrownBy(() -> service.changePassword(change(user, "equivocada", "Nueva12345")))
+        .isInstanceOf(InvalidCredentialsException.class);
+    assertThat(repository.find(user.id()).mustChangePassword()).isTrue();
+  }
+
+  @Test
+  void changesThePasswordWithTheRightCurrentOneOutsideTheForcedFlow() {
+    UserAccount user = savedUser("Actual12345", false, "ACTIVE");
+
+    service.changePassword(change(user, "Actual12345", "Nueva12345"));
+
+    assertThat(encoder.matches("Nueva12345", repository.find(user.id()).passwordHash())).isTrue();
+  }
+
+  @Test
+  void rejectsAnUnknownAccount() {
+    var command = new ChangePasswordCommand(UUID.randomUUID().toString(), null, "Nueva12345");
+
+    assertThatThrownBy(() -> service.changePassword(command))
+        .isInstanceOf(InvalidCredentialsException.class);
+  }
+
+  @Test
+  void rejectsAMalformedUserId() {
+    var command = new ChangePasswordCommand("no-es-un-uuid", null, "Nueva12345");
+
+    assertThatThrownBy(() -> service.changePassword(command))
+        .isInstanceOf(InvalidCredentialsException.class);
+  }
+
+  @Test
+  void rejectsADisabledAccount() {
+    UserAccount user = savedUser("Temporal123!", true, "INACTIVE");
+
+    assertThatThrownBy(() -> service.changePassword(change(user, null, "Nueva12345")))
+        .isInstanceOf(AccountDisabledException.class);
+  }
+
   private static class InMemoryUserRepository implements UserRepositoryPort {
     private final java.util.Map<String, UserAccount> byDocument = new java.util.HashMap<>();
+    private final java.util.Map<UUID, UserAccount> byId = new java.util.HashMap<>();
 
     void save(UserAccount user) {
       byDocument.put(user.documentType() + ":" + user.documentNumber(), user);
+      byId.put(user.id(), user);
+    }
+
+    UserAccount find(UUID id) {
+      return java.util.Objects.requireNonNull(byId.get(id));
     }
 
     @Override
     public Optional<UserAccount> findByDocument(DocumentType documentType, String documentNumber) {
       return Optional.ofNullable(byDocument.get(documentType + ":" + documentNumber));
+    }
+
+    @Override
+    public Optional<UserAccount> findById(UUID id) {
+      return Optional.ofNullable(byId.get(id));
+    }
+
+    @Override
+    public void changePassword(UUID id, String newPasswordHash) {
+      UserAccount user = java.util.Objects.requireNonNull(byId.get(id));
+      save(
+          new UserAccount(
+              user.id(),
+              user.email(),
+              user.documentType(),
+              user.documentNumber(),
+              newPasswordHash,
+              user.role(),
+              user.guestId(),
+              false,
+              user.status()));
     }
   }
 }
