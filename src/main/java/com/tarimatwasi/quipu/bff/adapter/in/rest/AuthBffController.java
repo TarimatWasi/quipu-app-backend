@@ -2,6 +2,9 @@ package com.tarimatwasi.quipu.bff.adapter.in.rest;
 
 import com.tarimatwasi.quipu.auth.adapter.out.security.JwtTokenProvider;
 import com.tarimatwasi.quipu.auth.domain.DocumentType;
+import com.tarimatwasi.quipu.auth.port.in.ChangePasswordUseCase;
+import com.tarimatwasi.quipu.auth.port.in.ChangePasswordUseCase.ChangePasswordCommand;
+import com.tarimatwasi.quipu.auth.port.in.ChangePasswordUseCase.ChangePasswordResult;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginCommand;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginResult;
@@ -9,8 +12,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,14 +24,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthBffController {
 
   private final LoginUseCase loginUseCase;
+  private final ChangePasswordUseCase changePasswordUseCase;
   private final JwtTokenProvider jwtTokenProvider;
   private final SessionCookieProperties sessionCookie;
 
   public AuthBffController(
       LoginUseCase loginUseCase,
+      ChangePasswordUseCase changePasswordUseCase,
       JwtTokenProvider jwtTokenProvider,
       SessionCookieProperties sessionCookie) {
     this.loginUseCase = loginUseCase;
+    this.changePasswordUseCase = changePasswordUseCase;
     this.jwtTokenProvider = jwtTokenProvider;
     this.sessionCookie = sessionCookie;
   }
@@ -38,26 +46,44 @@ public class AuthBffController {
 
   public record LoginResponse(String role, String name, boolean mustChangePassword) {}
 
+  public record ChangePasswordRequest(
+      @Nullable String currentPassword, @NotNull String newPassword) {}
+
   @PostMapping("/bff/auth/login")
   public ResponseEntity<LoginResponse> login(
       @Valid @RequestBody LoginRequest request, HttpServletResponse response) {
     LoginResult result =
         loginUseCase.login(
             new LoginCommand(request.documentType(), request.documentNumber(), request.password()));
-
-    String token = jwtTokenProvider.issue(result.userId(), result.role().name());
-    ResponseCookie cookie =
-        ResponseCookie.from("sessionToken", token)
-            .httpOnly(true)
-            .secure(true)
-            .sameSite(sessionCookie.sameSite().attribute())
-            .maxAge(sessionCookie.maxAge())
-            .path("/")
-            .build();
-    response.addHeader("Set-Cookie", cookie.toString());
-
+    String token =
+        jwtTokenProvider.issue(result.userId(), result.role().name(), result.mustChangePassword());
+    response.addHeader("Set-Cookie", sessionCookie(token).toString());
     return ResponseEntity.ok(
         new LoginResponse(
             result.role().name(), result.displayEmail(), result.mustChangePassword()));
+  }
+
+  /** RF-12: the change replaces the session cookie with one that no longer forces the change. */
+  @PostMapping("/bff/auth/change-password")
+  public ResponseEntity<Void> changePassword(
+      @Valid @RequestBody ChangePasswordRequest request,
+      Authentication authentication,
+      HttpServletResponse response) {
+    ChangePasswordResult result =
+        changePasswordUseCase.changePassword(
+            new ChangePasswordCommand(
+                authentication.getName(), request.currentPassword(), request.newPassword()));
+    response.addHeader("Set-Cookie", sessionCookie(result.sessionToken()).toString());
+    return ResponseEntity.noContent().build();
+  }
+
+  private ResponseCookie sessionCookie(String token) {
+    return ResponseCookie.from("sessionToken", token)
+        .httpOnly(true)
+        .secure(true)
+        .sameSite(sessionCookie.sameSite().attribute())
+        .maxAge(sessionCookie.maxAge())
+        .path("/")
+        .build();
   }
 }

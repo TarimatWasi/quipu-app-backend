@@ -2,6 +2,8 @@ package com.tarimatwasi.quipu.bff.adapter.in.rest;
 
 import com.tarimatwasi.quipu.auth.application.AccountDisabledException;
 import com.tarimatwasi.quipu.auth.application.InvalidCredentialsException;
+import com.tarimatwasi.quipu.auth.port.in.PasswordUnchangedException;
+import com.tarimatwasi.quipu.auth.port.in.WeakPasswordException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,27 @@ public class BffExceptionHandler {
   public ResponseEntity<BffErrorResponse> handleAccountDisabled() {
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
         .body(new BffErrorResponse("AUTH_ACCOUNT_DISABLED", "Cuenta deshabilitada"));
+  }
+
+  /** RNF-08: the message for a short password is the one SRS 17 gives for the field. */
+  @ExceptionHandler(WeakPasswordException.class)
+  public ResponseEntity<BffErrorResponse> handleWeakPassword(WeakPasswordException e) {
+    String message =
+        e.reason() == WeakPasswordException.Reason.TOO_SHORT
+            ? "Mínimo 8 caracteres"
+            : "La contraseña es demasiado larga";
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(new BffErrorResponse("AUTH_WEAK_PASSWORD", message, "newPassword"));
+  }
+
+  @ExceptionHandler(PasswordUnchangedException.class)
+  public ResponseEntity<BffErrorResponse> handlePasswordUnchanged() {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(
+            new BffErrorResponse(
+                "AUTH_PASSWORD_UNCHANGED",
+                "Elige una contraseña distinta de la temporal",
+                "newPassword"));
   }
 
   /** QP-SPRMONO-BFF-01: stable English code, Spanish message, and the first invalid field. */
