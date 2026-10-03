@@ -6,7 +6,8 @@ WORKDIR /build
 COPY .mvn .mvn
 COPY pom.xml ./
 COPY src src
-RUN mvn -B -Dmaven.test.skip=true package
+# La imagen no corre pruebas: no necesita bajar el spec del contrato (TAR-23).
+RUN mvn -B -Dmaven.test.skip=true -Ddownload.plugin.skip=true package
 
 FROM eclipse-temurin:25-jre-alpine@sha256:3c0a9084927a221ccd1d007fcaf614465672c0af37aaa834c5184483afe56d61
 RUN addgroup -S app && adduser -S -G app app
