@@ -1,11 +1,13 @@
 package com.tarimatwasi.quipu.contract;
 
+import static com.atlassian.oai.validator.mockmvc.OpenApiValidationMatchers.openApi;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.tarimatwasi.quipu.support.PostgresContainers;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +22,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ImportTestcontainers(PostgresContainers.class)
 class RateLimitBffTest {
+
+  private static final String SPEC =
+      Path.of("target/contract/bff.yaml").toAbsolutePath().toString();
 
   @Autowired MockMvc mockMvc;
 
@@ -47,6 +52,7 @@ class RateLimitBffTest {
                 .content("{\"documentType\":\"DNI\",\"documentNumber\":\"1\",\"password\":\"x\"}"))
         .andExpect(status().isTooManyRequests())
         .andExpect(header().exists("Retry-After"))
-        .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+        .andExpect(jsonPath("$.code").value("RATE_LIMITED"))
+        .andExpect(openApi().isValid(SPEC));
   }
 }
