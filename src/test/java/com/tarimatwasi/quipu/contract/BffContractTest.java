@@ -135,6 +135,17 @@ class BffContractTest {
   }
 
   @Test
+  void loginWithAMissingField() throws Exception {
+    mockMvc
+        .perform(
+            post(LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"documentType\":\"DNI\",\"documentNumber\":\"00000000\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(answersTheContractToARequestWith("validation.request.body.schema.required"));
+  }
+
+  @Test
   void changePasswordOk() throws Exception {
     Cookie session = sessionOf(login("00000000", TEMPORARY));
 
