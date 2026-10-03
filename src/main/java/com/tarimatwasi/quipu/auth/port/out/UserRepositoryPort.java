@@ -2,6 +2,7 @@ package com.tarimatwasi.quipu.auth.port.out;
 
 import com.tarimatwasi.quipu.auth.domain.DocumentType;
 import com.tarimatwasi.quipu.auth.domain.UserAccount;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,4 +13,24 @@ public interface UserRepositoryPort {
 
   /** Stores the new hash and clears the pending-change flag of the account. */
   void changePassword(UUID id, String newPasswordHash);
+
+  /** Emails are unique ignoring case. */
+  Optional<UserAccount> findByEmail(String email);
+
+  /** When the account's current recovery code expires; empty if it has none. */
+  Optional<Instant> findResetTokenExpiry(UUID id);
+
+  /** Replaces the account's recovery code by the hash of a new one (only one is valid). */
+  void saveResetToken(UUID id, String tokenHash, Instant expiresAt);
+
+  Optional<PendingReset> findPendingReset(String tokenHash);
+
+  /**
+   * Stores the new hash, clears the pending-change flag and removes the recovery code, so the code
+   * cannot be used again.
+   */
+  void resetPassword(UUID id, String newPasswordHash);
+
+  /** The account a recovery code belongs to and when the code expires. */
+  record PendingReset(UserAccount account, Instant expiresAt) {}
 }

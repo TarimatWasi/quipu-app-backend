@@ -2,6 +2,9 @@ package com.tarimatwasi.quipu.contract;
 
 import static com.atlassian.oai.validator.mockmvc.OpenApiValidationMatchers.openApi;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.atlassian.oai.validator.OpenApiInteractionValidator;
 import com.atlassian.oai.validator.whitelist.ValidationErrorsWhitelist;
 import com.atlassian.oai.validator.whitelist.rule.WhitelistRules;
+import com.tarimatwasi.quipu.auth.port.out.PasswordResetMailPort;
 import com.tarimatwasi.quipu.support.PostgresContainers;
 import jakarta.servlet.http.Cookie;
 import java.nio.file.Path;
@@ -16,6 +20,7 @@ import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.context.ImportTestcontainers;
@@ -23,6 +28,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -43,10 +49,12 @@ class BffContractTest {
   private static final String LOGIN = "/bff/auth/login";
   private static final String CHANGE_PASSWORD = "/bff/auth/change-password";
   private static final String TEMPORARY = "Temporal123!";
+  private static final String ADMIN_EMAIL = "00000000@example.com";
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired PasswordEncoder passwordEncoder;
+  @MockitoBean PasswordResetMailPort mail;
 
   /** The PostgreSQL container is shared by all integration tests: this test owns its users. */
   @BeforeEach
@@ -86,7 +94,7 @@ class BffContractTest {
         "INSERT INTO users (id, email, document_type, document_number, password_hash, role,"
             + " must_change_password, status) VALUES (?, ?, 'DNI', ?, ?, ?, ?, ?)",
         UUID.randomUUID(),
-        document + "@example.test",
+        document + "@example.com",
         document,
         passwordEncoder.encode(TEMPORARY),
         role,
@@ -182,5 +190,84 @@ class BffContractTest {
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("AUTH_NO_SESSION"))
         .andExpect(answersTheContractToARequestWith("validation.request.security.missing"));
+  }
+
+  private String requestResetCode() throws Exception {
+    mockMvc
+        .perform(
+            post("/bff/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + ADMIN_EMAIL + "\"}"))
+        .andExpect(status().isAccepted())
+        .andExpect(satisfiesTheContract());
+    var code = ArgumentCaptor.forClass(String.class);
+    verify(mail).sendResetLink(eq(ADMIN_EMAIL), code.capture(), any());
+    return code.getValue();
+  }
+
+  private ResultActions resetPassword(String body) throws Exception {
+    return mockMvc.perform(
+        post("/bff/auth/reset-password").contentType(MediaType.APPLICATION_JSON).content(body));
+  }
+
+  @Test
+  void forgotPasswordOk() throws Exception {
+    requestResetCode();
+  }
+
+  @Test
+  void forgotPasswordForAnUnknownEmailLooksTheSame() throws Exception {
+    mockMvc
+        .perform(
+            post("/bff/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"nobody@example.com\"}"))
+        .andExpect(status().isAccepted())
+        .andExpect(satisfiesTheContract());
+  }
+
+  @Test
+  void forgotPasswordWithAMalformedEmail() throws Exception {
+    mockMvc
+        .perform(
+            post("/bff/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"not-an-email\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(answersTheContractToARequestWith("validation.request.body.schema.format.email"));
+  }
+
+  @Test
+  void resetPasswordOk() throws Exception {
+    String code = requestResetCode();
+
+    resetPassword("{\"code\":\"" + code + "\",\"newPassword\":\"Nueva12345\"}")
+        .andExpect(status().isNoContent())
+        .andExpect(satisfiesTheContract());
+  }
+
+  @Test
+  void resetPasswordWithAnInvalidCode() throws Exception {
+    resetPassword("{\"code\":\"" + "x".repeat(43) + "\",\"newPassword\":\"Nueva12345\"}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("AUTH_INVALID_OR_EXPIRED_CODE"))
+        .andExpect(satisfiesTheContract());
+  }
+
+  @Test
+  void resetPasswordWithAWeakPassword() throws Exception {
+    String code = requestResetCode();
+
+    resetPassword("{\"code\":\"" + code + "\",\"newPassword\":\"corta\"}")
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("AUTH_WEAK_PASSWORD"))
+        .andExpect(answersTheContractToARequestWith("validation.request.body.schema.minLength"));
+  }
+
+  @Test
+  void resetPasswordWithAMissingField() throws Exception {
+    resetPassword("{\"code\":\"abc\"}")
+        .andExpect(status().isBadRequest())
+        .andExpect(answersTheContractToARequestWith("validation.request.body.schema.required"));
   }
 }

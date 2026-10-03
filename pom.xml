@@ -43,12 +43,13 @@
     <awssdk.version>2.55.6</awssdk.version>
     <openapi-request-validator.version>3.0.0</openapi-request-validator.version>
     <download-maven-plugin.version>2.1.0</download-maven-plugin.version>
+    <bucket4j.version>8.21.0</bucket4j.version>
 
     <!-- Contrato del BFF (TAR-23): tag de quipu-lib-contracts y sha256 de su openapi/bff.yaml.
          Para subir de versión se cambian los dos juntos: el hash se obtiene con
          `curl -sL <url del tag> | sha256sum` y el build rechaza un spec con otro hash. -->
-    <contract.version>v0.1.1</contract.version>
-    <contract.sha256>88a243269eee4f8f4e924f170e453ff530acbfc124f1017f363f491d22dcdc51</contract.sha256>
+    <contract.version>v0.1.2</contract.version>
+    <contract.sha256>c7eba417dbbf3d697f47b8443536ae6e9d6fd9cc3826c2af375222a0e2430830</contract.sha256>
   </properties>
 
   <dependencyManagement>
@@ -173,6 +174,11 @@
       <artifactId>archunit-junit5</artifactId>
       <version>${archunit.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j_jdk17-core</artifactId>
+      <version>${bucket4j.version}</version>
     </dependency>
     <dependency>
       <groupId>com.atlassian.oai</groupId>

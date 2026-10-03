@@ -8,10 +8,13 @@ import com.tarimatwasi.quipu.auth.port.in.ChangePasswordUseCase.ChangePasswordRe
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginCommand;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginResult;
+import com.tarimatwasi.quipu.auth.port.in.PasswordRecoveryUseCase;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -25,16 +28,19 @@ public class AuthBffController {
 
   private final LoginUseCase loginUseCase;
   private final ChangePasswordUseCase changePasswordUseCase;
+  private final PasswordRecoveryUseCase passwordRecoveryUseCase;
   private final JwtTokenProvider jwtTokenProvider;
   private final SessionCookieProperties sessionCookie;
 
   public AuthBffController(
       LoginUseCase loginUseCase,
       ChangePasswordUseCase changePasswordUseCase,
+      PasswordRecoveryUseCase passwordRecoveryUseCase,
       JwtTokenProvider jwtTokenProvider,
       SessionCookieProperties sessionCookie) {
     this.loginUseCase = loginUseCase;
     this.changePasswordUseCase = changePasswordUseCase;
+    this.passwordRecoveryUseCase = passwordRecoveryUseCase;
     this.jwtTokenProvider = jwtTokenProvider;
     this.sessionCookie = sessionCookie;
   }
@@ -48,6 +54,10 @@ public class AuthBffController {
 
   public record ChangePasswordRequest(
       @Nullable String currentPassword, @NotNull String newPassword) {}
+
+  public record ForgotPasswordRequest(@NotBlank @Email @Size(max = 200) String email) {}
+
+  public record ResetPasswordRequest(@NotBlank String code, @NotNull String newPassword) {}
 
   @PostMapping("/bff/auth/login")
   public ResponseEntity<LoginResponse> login(
@@ -74,6 +84,20 @@ public class AuthBffController {
             new ChangePasswordCommand(
                 authentication.getName(), request.currentPassword(), request.newPassword()));
     response.addHeader("Set-Cookie", sessionCookie(result.sessionToken()).toString());
+    return ResponseEntity.noContent().build();
+  }
+
+  /** RF-16: always 202, whether the email belongs to an account or not. */
+  @PostMapping("/bff/auth/forgot-password")
+  public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+    passwordRecoveryUseCase.requestReset(request.email());
+    return ResponseEntity.accepted().build();
+  }
+
+  /** RF-16: the person signs in afterwards, so no session is issued here. */
+  @PostMapping("/bff/auth/reset-password")
+  public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    passwordRecoveryUseCase.resetPassword(request.code(), request.newPassword());
     return ResponseEntity.noContent().build();
   }
 

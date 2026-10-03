@@ -22,7 +22,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 class SecurityConfig {
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider)
+  SecurityFilterChain securityFilterChain(
+      HttpSecurity http, JwtTokenProvider jwtTokenProvider, RateLimitProperties rateLimit)
       throws Exception {
     // CSRF is disabled on purpose (ADR-006). Mitigation, in layers: the session cookie is
     // SameSite=Lax (the browser talks to the frontend origin and the hosting layer rewrites
@@ -40,12 +41,18 @@ class SecurityConfig {
         .authorizeHttpRequests(
             a ->
                 a.requestMatchers(
-                        "/actuator/health", "/actuator/health/**", "/bff/auth/login", "/error")
+                        "/actuator/health",
+                        "/actuator/health/**",
+                        "/bff/auth/login",
+                        "/bff/auth/forgot-password",
+                        "/bff/auth/reset-password",
+                        "/error")
                     .permitAll()
                     .requestMatchers("/bff/diagnostics/**")
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
+        .addFilterBefore(new RateLimitFilter(rateLimit), AuthorizationFilter.class)
         .addFilterBefore(new JsonOnlyFilter(), AuthorizationFilter.class)
         .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), AuthorizationFilter.class);
     return http.build();

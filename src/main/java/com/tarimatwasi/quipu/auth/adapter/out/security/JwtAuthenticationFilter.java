@@ -29,7 +29,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   /** What a session pending a password change may still reach. */
   private static final Set<String> ALLOWED_WHILE_PENDING =
-      Set.of("/bff/auth/login", "/bff/auth/change-password", "/bff/auth/me", "/bff/auth/logout");
+      Set.of(
+          "/bff/auth/login",
+          "/bff/auth/forgot-password",
+          "/bff/auth/reset-password",
+          "/bff/auth/change-password",
+          "/bff/auth/me",
+          "/bff/auth/logout");
 
   // The body is written by hand: this module cannot depend on the BFF's error type.
   private static final String PASSWORD_CHANGE_REQUIRED_BODY =
