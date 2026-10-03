@@ -26,10 +26,9 @@ app:
   # Primer ADMIN (AdminBootstrap): solo se crea si no existe ninguno. Son las únicas variables
   # opcionales con valor vacío por defecto: una vez creado el ADMIN ya no hacen falta.
   admin:
-    required: true # sin ADMIN y sin variables ADMIN_* el arranque falla
+    required: true # sin ADMIN y sin ADMIN_DOCUMENT_NUMBER / ADMIN_EMAIL el arranque falla
     document-number: ${ADMIN_DOCUMENT_NUMBER:}
     email: ${ADMIN_EMAIL:}
-    initial-password: ${ADMIN_INITIAL_PASSWORD:}
   r2:
     account-id: ${R2_ACCOUNT_ID}
     access-key-id: ${R2_ACCESS_KEY_ID}
