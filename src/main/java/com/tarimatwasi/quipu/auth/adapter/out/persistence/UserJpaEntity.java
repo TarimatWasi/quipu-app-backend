@@ -2,7 +2,9 @@ package com.tarimatwasi.quipu.auth.adapter.out.persistence;
 
 import com.tarimatwasi.quipu.shared.domain.AuditableEntity;
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 @Entity
 @Table(name = "users")
@@ -33,11 +35,29 @@ public class UserJpaEntity extends AuditableEntity {
 
   private String status;
 
+  @Column(name = "reset_token_hash")
+  private @Nullable String resetTokenHash;
+
+  @Column(name = "reset_token_expires_at")
+  private @Nullable Instant resetTokenExpiresAt;
+
   protected UserJpaEntity() {}
 
+  /** A new password also kills a recovery code that was emailed before it. */
   public void changePassword(String newPasswordHash) {
     this.passwordHash = newPasswordHash;
     this.mustChangePassword = false;
+    this.resetTokenHash = null;
+    this.resetTokenExpiresAt = null;
+  }
+
+  public @Nullable Instant resetTokenExpiresAt() {
+    return resetTokenExpiresAt;
+  }
+
+  public void replaceResetToken(String tokenHash, Instant expiresAt) {
+    this.resetTokenHash = tokenHash;
+    this.resetTokenExpiresAt = expiresAt;
   }
 
   public com.tarimatwasi.quipu.auth.domain.UserAccount toDomain() {

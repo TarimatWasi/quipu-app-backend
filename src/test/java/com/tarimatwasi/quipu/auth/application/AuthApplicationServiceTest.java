@@ -12,8 +12,6 @@ import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginCommand;
 import com.tarimatwasi.quipu.auth.port.in.LoginUseCase.LoginResult;
 import com.tarimatwasi.quipu.auth.port.in.PasswordUnchangedException;
 import com.tarimatwasi.quipu.auth.port.in.WeakPasswordException;
-import com.tarimatwasi.quipu.auth.port.out.UserRepositoryPort;
-import java.util.Optional;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -216,45 +214,5 @@ class AuthApplicationServiceTest {
 
     assertThatThrownBy(() -> service.changePassword(change(user, null, "Nueva12345")))
         .isInstanceOf(AccountDisabledException.class);
-  }
-
-  private static class InMemoryUserRepository implements UserRepositoryPort {
-    private final java.util.Map<String, UserAccount> byDocument = new java.util.HashMap<>();
-    private final java.util.Map<UUID, UserAccount> byId = new java.util.HashMap<>();
-
-    void save(UserAccount user) {
-      byDocument.put(user.documentType() + ":" + user.documentNumber(), user);
-      byId.put(user.id(), user);
-    }
-
-    UserAccount find(UUID id) {
-      return java.util.Objects.requireNonNull(byId.get(id));
-    }
-
-    @Override
-    public Optional<UserAccount> findByDocument(DocumentType documentType, String documentNumber) {
-      return Optional.ofNullable(byDocument.get(documentType + ":" + documentNumber));
-    }
-
-    @Override
-    public Optional<UserAccount> findById(UUID id) {
-      return Optional.ofNullable(byId.get(id));
-    }
-
-    @Override
-    public void changePassword(UUID id, String newPasswordHash) {
-      UserAccount user = java.util.Objects.requireNonNull(byId.get(id));
-      save(
-          new UserAccount(
-              user.id(),
-              user.email(),
-              user.documentType(),
-              user.documentNumber(),
-              newPasswordHash,
-              user.role(),
-              user.guestId(),
-              false,
-              user.status()));
-    }
   }
 }

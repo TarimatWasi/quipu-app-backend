@@ -2,6 +2,7 @@ package com.tarimatwasi.quipu.bff.adapter.in.rest;
 
 import com.tarimatwasi.quipu.auth.application.AccountDisabledException;
 import com.tarimatwasi.quipu.auth.application.InvalidCredentialsException;
+import com.tarimatwasi.quipu.auth.port.in.InvalidResetCodeException;
 import com.tarimatwasi.quipu.auth.port.in.PasswordUnchangedException;
 import com.tarimatwasi.quipu.auth.port.in.WeakPasswordException;
 import org.springframework.core.Ordered;
@@ -62,5 +63,14 @@ public class BffExceptionHandler {
             .orElse(null);
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(new BffErrorResponse("VALIDATION_ERROR", "Datos de entrada inválidos", field));
+  }
+
+  /** One answer for an unknown, expired or used code and for a disabled account (RF-16). */
+  @ExceptionHandler(InvalidResetCodeException.class)
+  public ResponseEntity<BffErrorResponse> handleInvalidResetCode() {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        .body(
+            new BffErrorResponse(
+                "AUTH_INVALID_OR_EXPIRED_CODE", "Enlace inválido o expirado, solicita uno nuevo"));
   }
 }

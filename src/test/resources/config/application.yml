@@ -3,3 +3,6 @@
 app:
   jwt:
     secret: test-secret-test-secret-test-secret-test-secret
+  # Las pruebas de integración hacen muchas peticiones desde la misma dirección.
+  rate-limit:
+    per-minute: 100000
