@@ -13,6 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.tarimatwasi.quipu.auth.port.out.PasswordResetMailPort;
 import com.tarimatwasi.quipu.support.PostgresContainers;
 import jakarta.servlet.http.Cookie;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -184,6 +187,46 @@ class PasswordRecoveryBffTest {
     org.assertj.core.api.Assertions.assertThatThrownBy(
             () -> insertUser("GUEST@example.test", "22222222", "ACTIVE", false))
         .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void aRecoveryCodeBelongsToOneAccountOnly() {
+    insertUser("other@example.test", "22222222", "ACTIVE", false);
+    jdbc.update(
+        "UPDATE users SET reset_token_hash = 'abc', reset_token_expires_at = now() WHERE email = ?",
+        EMAIL);
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    "UPDATE users SET reset_token_hash = 'abc' WHERE email = ?",
+                    "other@example.test"))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+  }
+
+  /** A tiny table is scanned by choice; with scans disabled the planner shows what it could use. */
+  @Test
+  void theLookupByCodeCanUseAnIndexInsteadOfScanningTheTable() {
+    String plan =
+        jdbc.execute(
+            (Connection connection) -> {
+              try (Statement statement = connection.createStatement()) {
+                statement.execute("SET enable_seqscan = off");
+                var lines = new StringBuilder();
+                try (ResultSet rows =
+                    statement.executeQuery(
+                        "EXPLAIN SELECT id FROM users WHERE reset_token_hash = 'abc'")) {
+                  while (rows.next()) {
+                    lines.append(rows.getString(1)).append(System.lineSeparator());
+                  }
+                } finally {
+                  statement.execute("RESET enable_seqscan");
+                }
+                return lines.toString();
+              }
+            });
+
+    assertThat(plan).contains("uq_users_reset_token_hash");
   }
 
   @Test
