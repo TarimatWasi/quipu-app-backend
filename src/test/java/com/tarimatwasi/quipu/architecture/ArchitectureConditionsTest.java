@@ -10,6 +10,11 @@ import com.tarimatwasi.fixtures.architecture.Good;
 import com.tarimatwasi.fixtures.architecture.GoodTest;
 import com.tarimatwasi.fixtures.bff.adapter.in.rest.BffRoutes;
 import com.tarimatwasi.fixtures.core.adapter.in.rest.CoreRoutes;
+import com.tarimatwasi.fixtures.demo.adapter.out.AsyncInAdapter;
+import com.tarimatwasi.fixtures.demo.application.AsyncClassInService;
+import com.tarimatwasi.fixtures.demo.application.AsyncInService;
+import com.tarimatwasi.fixtures.demo.application.EnableAsyncInService;
+import com.tarimatwasi.fixtures.demo.application.SchedulingEnabled;
 import com.tarimatwasi.fixtures.demo.application.Service;
 import com.tarimatwasi.fixtures.demo.domain.BadDomain;
 import com.tarimatwasi.fixtures.demo.domain.GoodDomain;
@@ -77,6 +82,20 @@ class ArchitectureConditionsTest {
     assertFails(rule, Fixtures.ThreadWithTaskAndName.class);
     assertFails(rule, Fixtures.ThreadSubclassInstance.class);
     assertPasses(rule, Fixtures.ManagedThreadFree.class);
+  }
+
+  @Test
+  void con01_allowsAsyncOnlyInTheOutputAdapters() {
+    var rule = ArchitectureRules.BE_SPR_CON_01;
+    assertFails(rule, AsyncInService.class);
+    assertFails(rule, EnableAsyncInService.class);
+    assertFails(rule, AsyncClassInService.class);
+    assertPasses(rule, AsyncInAdapter.class);
+  }
+
+  @Test
+  void con01_stillRequiresAnAdrForScheduledTasks() {
+    assertFails(ArchitectureRules.BE_SPR_CON_01, SchedulingEnabled.class);
   }
 
   @Test

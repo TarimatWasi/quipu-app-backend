@@ -14,6 +14,7 @@ import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.properties.HasOwner;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.CompositeArchRule;
 import com.tngtech.archunit.library.freeze.FreezingArchRule;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,6 +27,7 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.repository.Repository;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Component;
@@ -339,24 +341,49 @@ final class ArchitectureRules {
 
   @ArchTest static final ArchRule BE_SPR_OBS_01 = NO_CLASSES_SHOULD_USE_JAVA_UTIL_LOGGING;
 
+  /**
+   * BE-SPR-CON-01 (TAR-126, ADR-F4): no unmanaged threads or executors and no scheduled tasks
+   * without an ADR; {@code @Async} and {@code @EnableAsync} only in {@code adapter.out}, on the
+   * executor that Spring Boot configures.
+   */
   @ArchTest
   static final ArchRule BE_SPR_CON_01 =
-      noClasses()
-          .should()
-          .beAnnotatedWith(EnableAsync.class)
-          .orShould()
-          .beAnnotatedWith(EnableScheduling.class)
-          .orShould()
-          .dependOnClassesThat()
-          .areAssignableTo(Executors.class)
-          .orShould()
-          .dependOnClassesThat()
-          .areAssignableTo(ThreadGroup.class)
-          .orShould()
-          .callConstructorWhere(
-              JavaCall.Predicates.target(
-                  HasOwner.Predicates.With.owner(JavaClass.Predicates.assignableTo(Thread.class))))
-          .because("any Thread constructor, whatever its overload, creates an unmanaged thread");
+      CompositeArchRule.of(
+              noClasses()
+                  .should()
+                  .beAnnotatedWith(EnableScheduling.class)
+                  .orShould()
+                  .dependOnClassesThat()
+                  .areAssignableTo(Executors.class)
+                  .orShould()
+                  .dependOnClassesThat()
+                  .areAssignableTo(ThreadGroup.class)
+                  .orShould()
+                  .callConstructorWhere(
+                      JavaCall.Predicates.target(
+                          HasOwner.Predicates.With.owner(
+                              JavaClass.Predicates.assignableTo(Thread.class))))
+                  .because(
+                      "any Thread constructor, whatever its overload, creates an unmanaged thread"))
+          .and(
+              classes()
+                  .that()
+                  .areAnnotatedWith(EnableAsync.class)
+                  .or()
+                  .areAnnotatedWith(Async.class)
+                  .should()
+                  .resideInAPackage("..adapter.out..")
+                  .because("@EnableAsync and a class-level @Async belong to the output adapters")
+                  .allowEmptyShould(true))
+          .and(
+              methods()
+                  .that()
+                  .areAnnotatedWith(Async.class)
+                  .should()
+                  .beDeclaredInClassesThat()
+                  .resideInAPackage("..adapter.out..")
+                  .because("the use case and the domain do not know the work leaves in a thread")
+                  .allowEmptyShould(true));
 
   @ArchTest
   static final ArchRule BE_SPR_CON_03 =

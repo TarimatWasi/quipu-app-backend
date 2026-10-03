@@ -54,6 +54,22 @@ class ProfileFilesContractTest {
     return all;
   }
 
+  /**
+   * ADR-F4 (TAR-126): the recovery email leaves in a virtual thread of Spring Boot's own executor,
+   * bounded and waiting for the sends in progress when the service stops.
+   */
+  @Test
+  void base_runsAsyncWorkOnBoundedVirtualThreads() throws IOException {
+    var base = load("application.yml");
+
+    assertThat(base.get("spring.threads.virtual.enabled")).isEqualTo(true);
+    assertThat(base.get("spring.task.execution.simple.concurrency-limit")).isEqualTo(10);
+    assertThat(base.get("spring.task.execution.simple.reject-tasks-when-limit-reached"))
+        .isEqualTo(true);
+    assertThat(base.get("spring.task.execution.shutdown.await-termination")).isEqualTo(true);
+    assertThat(base.get("spring.task.execution.shutdown.await-termination-period")).isEqualTo("8s");
+  }
+
   @Test
   void base_hasNoDefaultsAndApiDocsOff() throws IOException {
     var base = load("application.yml");
