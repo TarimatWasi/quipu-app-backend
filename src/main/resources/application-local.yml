@@ -23,9 +23,8 @@ app:
     secret: ${random.uuid}${random.uuid}
   # Sin ADMIN en local: no hay contraseña inicial que versionar (ver la prueba del perfil).
   admin:
-    document-number: ""
-    email: ""
-    initial-password: ""
+    document-number: "00000000" # el enlace para elegir la contraseña sale en la consola del arranque
+    email: "admin@quipu.local"
   # Servicios externos sin credenciales: los diagnósticos reportan FAIL en vez de tumbar el
   # arranque.
   r2:

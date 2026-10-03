@@ -34,7 +34,7 @@ class ProfileFilesContractTest {
    * longer needed (AdminBootstrap), so an empty default is legitimate.
    */
   private static final Pattern OPTIONAL_ADMIN_VARIABLE =
-      Pattern.compile("\\$\\{ADMIN_(DOCUMENT_NUMBER|EMAIL|INITIAL_PASSWORD):}");
+      Pattern.compile("\\$\\{ADMIN_(DOCUMENT_NUMBER|EMAIL):}");
 
   private static boolean hasDefault(String value) {
     return PLACEHOLDER_WITH_DEFAULT

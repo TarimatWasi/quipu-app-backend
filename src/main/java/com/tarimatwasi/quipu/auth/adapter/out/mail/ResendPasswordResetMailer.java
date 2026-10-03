@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import org.springframework.web.client.RestClientException;
  * origin is the one CORS already trusts ({@code app.cors.allowed-origin}).
  */
 @Component
+@Profile("!local")
 public class ResendPasswordResetMailer implements PasswordResetMailPort {
 
   private final RestClient restClient;
@@ -43,7 +45,7 @@ public class ResendPasswordResetMailer implements PasswordResetMailPort {
             .defaultHeader("Authorization", "Bearer " + apiKey)
             .build();
     this.fromEmail = fromEmail;
-    this.frontendOrigin = frontendOrigin.replaceAll("/+$", "");
+    this.frontendOrigin = frontendOrigin;
   }
 
   /**
@@ -60,7 +62,7 @@ public class ResendPasswordResetMailer implements PasswordResetMailPort {
 
   @Override
   public void sendResetLink(String toEmail, String code, Duration validFor) {
-    String link = frontendOrigin + "/reset-password?code=" + code;
+    String link = ResetLink.of(frontendOrigin, code);
     String text =
         "Hola,\n\n"
             + "Recibimos una solicitud para restablecer tu contraseña de Quipu. Abre este enlace"
