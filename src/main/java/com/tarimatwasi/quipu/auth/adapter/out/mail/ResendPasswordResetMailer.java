@@ -1,96 +1,38 @@
 package com.tarimatwasi.quipu.auth.adapter.out.mail;
 
-import com.tarimatwasi.quipu.auth.port.out.MailDeliveryException;
 import com.tarimatwasi.quipu.auth.port.out.PasswordResetMailPort;
-import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 /**
- * Sends the recovery email through Resend (free plan). The link points to the frontend, whose
- * origin is the one CORS already trusts ({@code app.cors.allowed-origin}).
+ * The recovery email leaves through Resend in another thread (ADR-F4): this adapter hands it to
+ * {@link ResendMailSender} and returns, so the caller never waits for the provider. When the
+ * executor of Spring Boot is at its limit ({@code spring.task.execution.simple.concurrency-limit})
+ * the email is dropped with a warning; the person asks again once the cooldown passes.
  */
 @Component
 @Profile("!local")
 public class ResendPasswordResetMailer implements PasswordResetMailPort {
 
-  private final RestClient restClient;
-  private final String fromEmail;
-  private final String frontendOrigin;
+  private static final Logger LOG = LoggerFactory.getLogger(ResendPasswordResetMailer.class);
 
-  @Autowired
-  public ResendPasswordResetMailer(
-      ResendProperties resend, @Value("${app.cors.allowed-origin}") String frontendOrigin) {
-    this(
-        RestClient.builder().requestFactory(withTimeouts()),
-        resend.apiKey(),
-        resend.fromEmail(),
-        frontendOrigin);
-  }
+  private final ResendMailSender sender;
 
-  /** The tests bind a mock server to the builder. */
-  ResendPasswordResetMailer(
-      RestClient.Builder builder, String apiKey, String fromEmail, String frontendOrigin) {
-    this.restClient =
-        builder
-            .baseUrl("https://api.resend.com")
-            .defaultHeader("Authorization", "Bearer " + apiKey)
-            .build();
-    this.fromEmail = fromEmail;
-    this.frontendOrigin = frontendOrigin;
-  }
-
-  /**
-   * A provider that hangs must not hold a request thread for long: the call happens while a person
-   * waits for the answer of the recovery form.
-   */
-  private static ClientHttpRequestFactory withTimeouts() {
-    var factory =
-        new JdkClientHttpRequestFactory(
-            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
-    factory.setReadTimeout(Duration.ofSeconds(5));
-    return factory;
+  public ResendPasswordResetMailer(ResendMailSender sender) {
+    this.sender = sender;
   }
 
   @Override
   public void sendResetLink(String toEmail, String code, Duration validFor) {
-    String link = ResetLink.of(frontendOrigin, code);
-    String text =
-        "Hola,\n\n"
-            + "Recibimos una solicitud para restablecer tu contraseña de Quipu. Abre este enlace"
-            + " para elegir una nueva; vale "
-            + validFor.toMinutes()
-            + " minutos y solo se puede usar una vez:\n\n"
-            + link
-            + "\n\n"
-            + "Si no lo pediste, ignora este correo: tu contraseña no cambia.\n";
     try {
-      restClient
-          .post()
-          .uri("/emails")
-          .body(
-              Map.of(
-                  "from",
-                  fromEmail,
-                  "to",
-                  toEmail,
-                  "subject",
-                  "Restablece tu contraseña de Quipu",
-                  "text",
-                  text))
-          .retrieve()
-          .toBodilessEntity();
-    } catch (RestClientException | IllegalArgumentException e) {
-      // The message carries neither the address nor the code: it may reach the logs.
-      throw new MailDeliveryException("Resend did not accept the recovery email", e);
+      sender.send(toEmail, code, validFor);
+    } catch (TaskRejectedException e) {
+      // Neither the address nor the code: this reaches the logs.
+      LOG.warn("Recovery email was not queued: the task executor is at its concurrency limit");
     }
   }
 }

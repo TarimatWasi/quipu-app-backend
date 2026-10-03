@@ -17,6 +17,21 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  # Hilos virtuales (Java 25, ADR-F4): el applicationTaskExecutor de Boot pasa a ser un
+  # SimpleAsyncTaskExecutor de hilos virtuales, que ignora spring.task.execution.pool.*. Su límite
+  # y la espera al apagar se fijan abajo. El ejecutor es compartido: lo usa el correo de recuperación
+  # (@Async) y cualquier otro @Async de adapter.out que se agregue.
+  threads:
+    virtual:
+      enabled: true
+  task:
+    execution:
+      simple:
+        concurrency-limit: 10
+        reject-tasks-when-limit-reached: true
+      shutdown:
+        await-termination: true
+        await-termination-period: 8s
 
 # Sesión (TAR-62 PR3: pasa a @ConfigurationProperties con Duration de 30 días). El secreto viene
 # siempre del entorno: sin valor por defecto en ningún perfil.
